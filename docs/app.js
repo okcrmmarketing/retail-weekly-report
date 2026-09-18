@@ -282,13 +282,15 @@ function buildWorkPreviewHtml(team) {
         <div class="preview-work-group">
           ${(g.tasks || []).map((it, i) => `
             <div class="preview-work-item">
-              <div class="preview-work-line1">
-                ${i === 0 ? `<span class="preview-chip">${escapeHtml(g.category || '-')}</span>` : `<span class="preview-chip preview-chip-spacer">${escapeHtml(g.category || '-')}</span>`}
-                <span class="preview-work-title">${escapeHtml(it.title || '(제목 없음)')}</span>
-                <span class="due">${it.ongoing ? '계속' : formatDueDate(it.dueDate)}</span>
+              <div class="preview-work-chipcol">${i === 0 ? `<span class="preview-chip">${escapeHtml(g.category || '-')}</span>` : ''}</div>
+              <div class="preview-work-main">
+                <div class="preview-work-titleline">
+                  <span class="preview-work-title">${escapeHtml(it.title || '(제목 없음)')}</span>
+                  <span class="due">${it.ongoing ? '계속' : formatDueDate(it.dueDate)}</span>
+                </div>
+                ${it.detail ? `<p class="preview-work-detail">${escapeHtml(it.detail)}</p>` : ''}
+                ${it.note ? `<p class="preview-work-detail hint">비고: ${escapeHtml(it.note)}</p>` : ''}
               </div>
-              ${it.detail ? `<p class="preview-work-detail">${escapeHtml(it.detail)}</p>` : ''}
-              ${it.note ? `<p class="preview-work-detail hint">비고: ${escapeHtml(it.note)}</p>` : ''}
             </div>`).join('')}
         </div>`).join('');
       body += '</div>';
@@ -604,11 +606,13 @@ function renderPresentSlide() {
       ? s.workGroups.flatMap((g) => (g.tasks || []).map((w, i) => `
           <tr class="${i === 0 ? 'group-start' : ''}">
             <td>
-              <div class="present-work-title-row">
-                ${i === 0 ? `<span class="preview-chip">${escapeHtml(g.category || '-')}</span>` : `<span class="preview-chip preview-chip-spacer">${escapeHtml(g.category || '-')}</span>`}
-                <span class="present-work-title">${escapeHtml(w.title || '(제목 없음)')}</span>
+              <div class="present-work-row-flex">
+                <div class="present-work-chipcol">${i === 0 ? `<span class="preview-chip">${escapeHtml(g.category || '-')}</span>` : ''}</div>
+                <div class="present-work-main">
+                  <span class="present-work-title">${escapeHtml(w.title || '(제목 없음)')}</span>
+                  ${w.detail ? `<p class="present-work-detail">${escapeHtml(w.detail)}</p>` : ''}
+                </div>
               </div>
-              ${w.detail ? `<p class="present-work-detail">${escapeHtml(w.detail)}</p>` : ''}
             </td>
             <td class="col-date">${w.ongoing ? '계속 진행' : (formatDueDate(w.dueDate) ? formatDueDate(w.dueDate).replace('~', '') : '-')}</td>
             <td class="col-note">${escapeHtml(w.note || '-')}</td>
