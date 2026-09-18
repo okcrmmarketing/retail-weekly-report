@@ -80,6 +80,7 @@ let state = {
   activeTeamKey: null,
   activeType: 'work',
   activeTrendAuthor: null,
+  presentTeamFilter: null, // null = 전체 팀 포함, Set이면 그 안에 든 teamKey만 발표모드에 포함(2026-09-18: 2개 팀씩 묶어서 발표하는 경우 대비)
 };
 let workDragSrcIdx = null;
 let adminSessionPassword = null; // 로그인 성공 시 세션 동안만 메모리 보관 (재입력 방지용)
@@ -459,12 +460,15 @@ function compressImage(file, maxWidth = 1200, quality = 0.72) {
   });
 }
 
-function buildTrendPreviewHtml(team) {
+function buildTrendPreviewHtml(team, authorFilter) {
   const allItems = (state.trend[team.key] || { items: [] }).items;
   const members = team.members || [];
-  const ordered = members.length
+  let ordered = members.length
     ? members.map((m) => allItems.find((it) => it.author === m)).filter(Boolean)
     : allItems;
+  // authorFilter가 있으면(=편집 패널 옆 실시간 미리보기) 지금 선택된 팀원 것만 보여준다 --
+  // 없으면(=팀별로 각각 인쇄 등 전체보기) 팀 전체 팀원을 다 합쳐서 보여준다.
+  if (authorFilter) ordered = ordered.filter((t) => t.author === authorFilter);
   const hasContent = ordered.some((t) => t.title || t.content || (t.images || []).length);
 
   let body = '<p class="preview-empty">작성된 내용이 없습니다.</p>';
@@ -497,7 +501,7 @@ function renderTrendPreview() {
   const team = currentTeam();
   const el = document.getElementById('trendPreview');
   if (!team) { el.innerHTML = ''; return; }
-  el.innerHTML = buildTrendPreviewHtml(team);
+  el.innerHTML = buildTrendPreviewHtml(team, state.activeTrendAuthor);
 }
 
 // ---------------- 저장 / 새로고침 ----------------
@@ -578,6 +582,19 @@ function ensureOrderShape() {
   });
 }
 
+// 발표 대상 팀 다중선택 -- 매주 전체 팀이 아니라 2개 팀씩 묶어서 발표하는 경우가 있어서
+// (2026-09-18) 추가. null이면 "전체 포함"으로 취급하고, 체크를 하나라도 해제하는 순간부터
+// Set을 만들어 그 안에 든 팀만 발표모드에 포함시킨다. 서버에 저장하지 않는 이 세션 한정
+// 설정이다(매주/매 발표마다 묶음이 달라질 수 있어서).
+function isTeamIncluded(teamKey) {
+  return !state.presentTeamFilter || state.presentTeamFilter.has(teamKey);
+}
+function toggleTeamIncluded(teamKey) {
+  if (!state.presentTeamFilter) state.presentTeamFilter = new Set(state.teams.map((t) => t.key));
+  if (state.presentTeamFilter.has(teamKey)) state.presentTeamFilter.delete(teamKey);
+  else state.presentTeamFilter.add(teamKey);
+}
+
 function renderOrderList() {
   ensureOrderShape();
   const wrap = document.getElementById('orderList');
@@ -591,12 +608,18 @@ function renderOrderList() {
       const el = document.createElement('div');
       el.className = 'order-item';
       el.innerHTML = `
-        <span class="order-item-name">${idx + 1}. ${escapeHtml(team.label)}</span>
+        <label class="order-item-name order-checkbox-label">
+          <input type="checkbox" data-include ${isTeamIncluded(teamKey) ? 'checked' : ''} />
+          ${idx + 1}. ${escapeHtml(team.label)}
+        </label>
         <span class="order-item-btns">
           <button class="btn btn-outline btn-xs" data-up>▲</button>
           <button class="btn btn-outline btn-xs" data-down>▼</button>
         </span>
       `;
+      el.querySelector('[data-include]').addEventListener('change', () => {
+        toggleTeamIncluded(teamKey);
+      });
       el.querySelector('[data-up]').addEventListener('click', () => {
         if (idx === 0) return;
         [order[idx - 1], order[idx]] = [order[idx], order[idx - 1]];
@@ -621,7 +644,10 @@ function renderOrderList() {
       groupEl.className = 'order-team-group';
       groupEl.innerHTML = `
         <div class="order-item order-team-header">
-          <span class="order-item-name">${bIdx + 1}. ${escapeHtml(team.label)}</span>
+          <label class="order-item-name order-checkbox-label">
+            <input type="checkbox" data-include ${isTeamIncluded(block.teamKey) ? 'checked' : ''} />
+            ${bIdx + 1}. ${escapeHtml(team.label)}
+          </label>
           <span class="order-item-btns">
             <button class="btn btn-outline btn-xs" data-team-up>▲</button>
             <button class="btn btn-outline btn-xs" data-team-down>▼</button>
@@ -629,6 +655,9 @@ function renderOrderList() {
         </div>
         <div class="order-member-list"></div>
       `;
+      groupEl.querySelector('[data-include]').addEventListener('change', () => {
+        toggleTeamIncluded(block.teamKey);
+      });
       groupEl.querySelector('[data-team-up]').addEventListener('click', () => {
         if (bIdx === 0) return;
         [blocks[bIdx - 1], blocks[bIdx]] = [blocks[bIdx], blocks[bIdx - 1]];
@@ -722,6 +751,7 @@ function buildPresentSlides() {
   const slides = [];
 
   state.order.work.forEach((teamKey) => {
+    if (!isTeamIncluded(teamKey)) return;
     const team = state.teams.find((t) => t.key === teamKey);
     if (!team) return;
     const workGroups = (state.work[teamKey] || { items: [] }).items;
@@ -746,6 +776,7 @@ function buildPresentSlides() {
   // 요청(2026-09-18)에 따라, 팀별로 묶어서 한 슬라이드에 여러 명을 보여주던 방식에서
   // "발표자 1명 = 슬라이드 1장"으로 바꿨다 -- order.trend에 담긴 "팀key::이름" 순서 그대로.
   state.order.trend.forEach((block) => {
+    if (!isTeamIncluded(block.teamKey)) return;
     const team = state.teams.find((t) => t.key === block.teamKey);
     if (!team) return;
     const items = (state.trend[block.teamKey] || { items: [] }).items;

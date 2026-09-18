@@ -218,8 +218,9 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 0 24px 60px; }
 }
 .trend-img-box img { width: 100%; height: 100%; object-fit: cover; }
 .trend-img-remove {
-  position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.55); color: #fff;
-  border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; cursor: pointer; line-height: 1;
+  position: absolute; top: 5px; right: 5px; background: #E02424; color: #fff;
+  border: 1.5px solid #fff; border-radius: 50%; width: 22px; height: 22px; font-size: 12px; cursor: pointer; line-height: 1;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
 .trend-img-add {
   display: flex; align-items: center; justify-content: center; text-align: center;
@@ -358,15 +359,6 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 0 24px 60px; }
 .preview-vac-line { font-size: 13px; color: var(--text-muted); }
 .preview-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
-/* 트렌드 아이템(편집) */
-.trend-images { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
-.trend-images img { width: 72px; height: 72px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); }
-.trend-img-wrap { position: relative; }
-.trend-img-remove {
-  position: absolute; top: -6px; right: -6px; background: #E02424; color: #fff;
-  border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 11px; cursor: pointer; line-height: 1;
-}
-.trend-item-toolbar { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
 
 /* 발표 순서 모달 */
 .order-type-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
@@ -382,6 +374,8 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 0 24px 60px; }
 }
 .order-item-btns button { margin-left: 4px; }
 .order-item-name { font-weight: 600; font-size: 14px; }
+.order-checkbox-label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.order-checkbox-label input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
 .order-item-team { font-weight: 400; color: var(--text-faint); font-size: 12px; }
 
 .order-team-group { border: 1px solid var(--border); border-radius: 10px; padding: 8px; background: #fff; }
