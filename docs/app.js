@@ -67,6 +67,7 @@ let state = {
   activeType: 'work',
   activeTrendAuthor: null,
 };
+let workDragSrcIdx = null;
 let adminSessionPassword = null; // 로그인 성공 시 세션 동안만 메모리 보관 (재입력 방지용)
 
 // ---------------- API 호출 ----------------
@@ -151,57 +152,100 @@ function renderWorkEdit() {
   vacWrap.innerHTML = '';
   if (!team) return;
 
-  const items = (state.work[team.key] || (state.work[team.key] = { items: [] })).items;
-  items.forEach((item, idx) => {
+  const groups = (state.work[team.key] || (state.work[team.key] = { items: [] })).items;
+  groups.forEach((group, gIdx) => {
+    group.tasks = group.tasks || [];
     const card = document.createElement('div');
     card.className = 'item-card';
-    const noteOpen = item.__noteOpen || !!item.note;
     card.innerHTML = `
       <div class="item-card-top">
-        <span class="item-drag-handle">⠿</span>
-        <button class="btn-danger-icon" data-del title="삭제">✕</button>
+        <span class="item-drag-handle" data-drag-handle title="드래그해서 순서 변경">⠿</span>
+        <div class="field-group category-field"><label>카테고리</label><input placeholder="카테고리 작성" value="${escapeAttr(group.category)}" data-cat /></div>
+        <button class="btn-danger-icon" data-del-group title="카테고리 삭제">✕</button>
       </div>
-      <div class="field-row">
-        <div class="field-group"><label>카테고리</label><input placeholder="카테고리 작성" value="${escapeAttr(item.category)}" data-f="category" /></div>
-        <div class="field-group">
-          <label>완료예정일</label>
-          <div class="due-date-row">
-            <input type="date" value="${escapeAttr(item.dueDate)}" data-f="dueDate" ${item.ongoing ? 'disabled' : ''} />
-            <button class="btn btn-toggle btn-xs ${item.ongoing ? 'active' : ''}" data-toggle-ongoing type="button">계속</button>
+      <div class="task-list" data-tasks></div>
+      <button class="btn btn-ghost btn-xs" data-add-task type="button">+ 세부 업무 추가</button>
+    `;
+    card.querySelector('[data-cat]').addEventListener('input', (e) => { group.category = e.target.value; });
+    card.querySelector('[data-del-group]').addEventListener('click', () => {
+      groups.splice(gIdx, 1);
+      renderWorkEdit();
+    });
+    card.querySelector('[data-add-task]').addEventListener('click', () => {
+      group.tasks.push({ title: '', detail: '', dueDate: '', ongoing: false, note: '' });
+      renderWorkEdit();
+    });
+
+    const tasksWrap = card.querySelector('[data-tasks]');
+    group.tasks.forEach((task, tIdx) => {
+      const block = document.createElement('div');
+      block.className = 'task-block';
+      const noteOpen = task.__noteOpen || !!task.note;
+      block.innerHTML = `
+        <div class="task-block-top">
+          <span class="task-block-label">업무 ${tIdx + 1}</span>
+          <button class="btn-danger-icon" data-del-task title="이 업무 삭제">✕</button>
+        </div>
+        <div class="field-row">
+          <div class="field-group full"><label>업무 제목</label><input placeholder="업무 제목 작성" value="${escapeAttr(task.title)}" data-f="title" /></div>
+        </div>
+        <div class="field-row">
+          <div class="field-group">
+            <label>완료예정일</label>
+            <div class="due-date-row">
+              <input type="date" value="${escapeAttr(task.dueDate)}" data-f="dueDate" ${task.ongoing ? 'disabled' : ''} />
+              <button class="btn btn-toggle btn-xs ${task.ongoing ? 'active' : ''}" data-toggle-ongoing type="button">계속</button>
+            </div>
           </div>
         </div>
-      </div>
-      <div class="field-row">
-        <div class="field-group full"><label>업무 제목</label><input placeholder="업무 제목 작성" value="${escapeAttr(item.title)}" data-f="title" /></div>
-      </div>
-      <div class="field-row">
-        <div class="field-group full"><label>상세내용</label><textarea rows="2" placeholder="업무 상세내용 작성" data-f="detail">${escapeHtml(item.detail)}</textarea></div>
-      </div>
-      <div class="field-row ${noteOpen ? '' : 'hidden'}" data-note-row>
-        <div class="field-group full"><label>비고</label><input placeholder="비고" value="${escapeAttr(item.note)}" data-f="note" /></div>
-      </div>
-      <button class="note-toggle ${noteOpen ? 'hidden' : ''}" data-note-toggle>⌄ 비고 추가</button>
-    `;
-    card.querySelectorAll('[data-f]').forEach((el) => {
-      el.addEventListener('input', () => { items[idx][el.dataset.f] = el.value; });
-    });
-    card.querySelector('[data-del]').addEventListener('click', () => {
-      items.splice(idx, 1);
-      renderWorkEdit();
-    });
-    card.querySelector('[data-toggle-ongoing]').addEventListener('click', () => {
-      item.ongoing = !item.ongoing;
-      if (item.ongoing) item.dueDate = '';
-      renderWorkEdit();
-    });
-    const toggleBtn = card.querySelector('[data-note-toggle]');
-    if (toggleBtn) {
+        <div class="field-row">
+          <div class="field-group full"><label>상세내용</label><textarea rows="2" placeholder="업무 상세내용 작성" data-f="detail">${escapeHtml(task.detail)}</textarea></div>
+        </div>
+        <div class="field-row ${noteOpen ? '' : 'hidden'}" data-note-row>
+          <div class="field-group full"><label>비고</label><input placeholder="비고" value="${escapeAttr(task.note)}" data-f="note" /></div>
+        </div>
+        <button class="note-toggle ${noteOpen ? 'hidden' : ''}" data-note-toggle type="button">⌄ 비고 추가</button>
+      `;
+      block.querySelectorAll('[data-f]').forEach((el) => {
+        el.addEventListener('input', () => { task[el.dataset.f] = el.value; });
+      });
+      block.querySelector('[data-del-task]').addEventListener('click', () => {
+        group.tasks.splice(tIdx, 1);
+        renderWorkEdit();
+      });
+      block.querySelector('[data-toggle-ongoing]').addEventListener('click', () => {
+        task.ongoing = !task.ongoing;
+        if (task.ongoing) task.dueDate = '';
+        renderWorkEdit();
+      });
+      const toggleBtn = block.querySelector('[data-note-toggle]');
       toggleBtn.addEventListener('click', () => {
-        item.__noteOpen = true;
-        card.querySelector('[data-note-row]').classList.remove('hidden');
+        task.__noteOpen = true;
+        block.querySelector('[data-note-row]').classList.remove('hidden');
         toggleBtn.classList.add('hidden');
       });
-    }
+      tasksWrap.appendChild(block);
+    });
+
+    const handle = card.querySelector('[data-drag-handle]');
+    handle.addEventListener('mousedown', () => { card.draggable = true; });
+    card.addEventListener('dragend', () => { card.draggable = false; card.classList.remove('dragging'); });
+    card.addEventListener('dragstart', (e) => {
+      workDragSrcIdx = gIdx;
+      e.dataTransfer.effectAllowed = 'move';
+      card.classList.add('dragging');
+    });
+    card.addEventListener('dragover', (e) => { e.preventDefault(); card.classList.add('drag-over'); });
+    card.addEventListener('dragleave', () => { card.classList.remove('drag-over'); });
+    card.addEventListener('drop', (e) => {
+      e.preventDefault();
+      card.classList.remove('drag-over');
+      if (workDragSrcIdx === null || workDragSrcIdx === gIdx) return;
+      const [moved] = groups.splice(workDragSrcIdx, 1);
+      groups.splice(gIdx, 0, moved);
+      workDragSrcIdx = null;
+      renderWorkEdit();
+    });
     itemsWrap.appendChild(card);
   });
 
@@ -226,25 +270,28 @@ function renderWorkEdit() {
 }
 
 function buildWorkPreviewHtml(team) {
-  const items = (state.work[team.key] || { items: [] }).items;
+  const groups = (state.work[team.key] || { items: [] }).items;
   const vacItems = (state.vacation[team.key] || { items: [] }).items;
-  const hasAny = items.length > 0 || vacItems.length > 0;
+  const hasAny = groups.some((g) => (g.tasks || []).length) || vacItems.length > 0;
 
   let body = '';
   if (!hasAny) {
     body = '<p class="preview-empty">작성된 내용이 없습니다.</p>';
   } else {
-    if (items.length) {
+    if (groups.some((g) => (g.tasks || []).length)) {
       body += '<div class="preview-block"><p class="preview-block-title">이번주 업무</p>';
-      body += items.map((it) => `
-        <div class="preview-work-item">
-          <div class="preview-work-line1">
-            <span class="preview-chip">${escapeHtml(it.category || '-')}</span>
-            <span class="preview-work-title">${escapeHtml(it.title || '(제목 없음)')}</span>
-            <span class="due">${it.ongoing ? '계속' : formatDueDate(it.dueDate)}</span>
-          </div>
-          ${it.detail ? `<p class="preview-work-detail">${escapeHtml(it.detail)}</p>` : ''}
-          ${it.note ? `<p class="preview-work-detail hint">비고: ${escapeHtml(it.note)}</p>` : ''}
+      body += groups.filter((g) => (g.tasks || []).length).map((g) => `
+        <div class="preview-work-group">
+          <span class="preview-chip">${escapeHtml(g.category || '-')}</span>
+          ${(g.tasks || []).map((it) => `
+            <div class="preview-work-item">
+              <div class="preview-work-line1">
+                <span class="preview-work-title">${escapeHtml(it.title || '(제목 없음)')}</span>
+                <span class="due">${it.ongoing ? '계속' : formatDueDate(it.dueDate)}</span>
+              </div>
+              ${it.detail ? `<p class="preview-work-detail">${escapeHtml(it.detail)}</p>` : ''}
+              ${it.note ? `<p class="preview-work-detail hint">비고: ${escapeHtml(it.note)}</p>` : ''}
+            </div>`).join('')}
         </div>`).join('');
       body += '</div>';
     }
@@ -479,7 +526,10 @@ function renderOrderList() {
     const el = document.createElement('div');
     el.className = 'order-item';
     el.innerHTML = `
-      <span>${idx + 1}. ${escapeHtml(team.label)}</span>
+      <span class="order-item-main">
+        <span class="order-item-name">${idx + 1}. ${escapeHtml(team.label)}</span>
+        <span class="order-item-tags"><span class="order-tag">업무보고</span><span class="order-tag">트렌드보고</span></span>
+      </span>
       <span class="order-item-btns">
         <button class="btn btn-outline btn-xs" data-up>▲</button>
         <button class="btn btn-outline btn-xs" data-down>▼</button>
@@ -515,14 +565,15 @@ function buildPresentSlides() {
   state.order.forEach((teamKey) => {
     const team = state.teams.find((t) => t.key === teamKey);
     if (!team) return;
-    const work = (state.work[teamKey] || { items: [] }).items;
+    const workGroups = (state.work[teamKey] || { items: [] }).items;
     const vacation = (state.vacation[teamKey] || { items: [] }).items;
     const trendAll = (state.trend[teamKey] || { items: [] }).items;
     const members = team.members || [];
     const trend = (members.length ? members.map((m) => trendAll.find((it) => it.author === m)).filter(Boolean) : trendAll)
       .filter((t) => t.title || t.content || (t.images || []).length);
 
-    if (work.length || vacation.length) slides.push({ type: 'work', team, work, vacation });
+    const hasWork = workGroups.some((g) => (g.tasks || []).length);
+    if (hasWork || vacation.length) slides.push({ type: 'work', team, workGroups, vacation });
     if (trend.length) slides.push({ type: 'trend', team, trend });
   });
   return slides;
@@ -550,20 +601,21 @@ function renderPresentSlide() {
   renderPresentDots(slides);
 
   if (s.type === 'work') {
-    const workRowsHtml = s.work.length
-      ? s.work.map((w) => `
+    const hasWork = s.workGroups.some((g) => (g.tasks || []).length);
+    const workRowsHtml = hasWork
+      ? s.workGroups.flatMap((g) => (g.tasks || []).map((w) => `
           <tr>
             <td>
-              <span class="preview-chip">${escapeHtml(w.category || '-')}</span>
+              <span class="preview-chip">${escapeHtml(g.category || '-')}</span>
               <p class="present-work-title">${escapeHtml(w.title || '(제목 없음)')}</p>
               ${w.detail ? `<p class="present-work-detail">${escapeHtml(w.detail)}</p>` : ''}
             </td>
             <td class="col-date">${w.ongoing ? '계속 진행' : (formatDueDate(w.dueDate) ? formatDueDate(w.dueDate).replace('~', '') : '-')}</td>
             <td class="col-note">${escapeHtml(w.note || '-')}</td>
-          </tr>`).join('')
+          </tr>`)).join('')
       : '';
 
-    const workHtml = s.work.length
+    const workHtml = hasWork
       ? `<table class="present-work-table">
           <thead><tr><th>이번주 업무</th><th class="col-date">진행날짜</th><th class="col-note">비고</th></tr></thead>
           <tbody>${workRowsHtml}</tbody>
@@ -616,14 +668,17 @@ function toggleFullscreen() {
 // ---------------- 복사 / 다운로드 / 인쇄 ----------------
 function previewToText(team, type) {
   if (type === 'work') {
-    const items = (state.work[team.key] || { items: [] }).items;
+    const groups = (state.work[team.key] || { items: [] }).items;
     const vac = (state.vacation[team.key] || { items: [] }).items;
     let out = `${team.label} 주간업무 보고 - ${weekLabel(state.week)}\n\n`;
     out += '■ 이번주 업무\n';
-    if (!items.length) out += '  (등록된 업무 없음)\n';
-    items.forEach((it) => {
-      const due = it.ongoing ? '계속' : (it.dueDate || '-');
-      out += `  - [${it.category || '-'}] ${it.title || ''} ${it.detail || ''} (예정일: ${due}${it.note ? ', 비고: ' + it.note : ''})\n`;
+    const hasTasks = groups.some((g) => (g.tasks || []).length);
+    if (!hasTasks) out += '  (등록된 업무 없음)\n';
+    groups.forEach((g) => {
+      (g.tasks || []).forEach((it) => {
+        const due = it.ongoing ? '계속' : (it.dueDate || '-');
+        out += `  - [${g.category || '-'}] ${it.title || ''} ${it.detail || ''} (예정일: ${due}${it.note ? ', 비고: ' + it.note : ''})\n`;
+      });
     });
     out += '\n■ 이번 주 휴가자\n';
     if (!vac.length) out += '  (없음)\n';
@@ -831,7 +886,7 @@ function wireWorkPanel() {
   document.getElementById('addWorkItemBtn').addEventListener('click', () => {
     const team = currentTeam();
     if (!team) return;
-    state.work[team.key].items.push({ category: '', dueDate: '', ongoing: false, title: '', detail: '', note: '' });
+    state.work[team.key].items.push({ category: '', tasks: [{ title: '', detail: '', dueDate: '', ongoing: false, note: '' }] });
     renderWorkEdit();
   });
   document.getElementById('addVacationBtn').addEventListener('click', () => {

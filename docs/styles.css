@@ -242,8 +242,20 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 0 24px 60px; }
   padding: 14px;
   background: #fff;
 }
-.item-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-.item-drag-handle { color: var(--text-faint); font-size: 14px; letter-spacing: 1px; }
+.item-card-top { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.item-card-top .category-field { flex: 1; }
+.item-drag-handle { color: var(--text-faint); font-size: 14px; letter-spacing: 1px; cursor: grab; }
+.item-drag-handle:active { cursor: grabbing; }
+.item-card.dragging { opacity: 0.4; }
+.item-card.drag-over { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+
+.task-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 8px; }
+.task-block { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; background: var(--input-bg); }
+.task-block-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.task-block-label { font-size: 12px; font-weight: 700; color: var(--text-faint); }
+
+.preview-work-group { margin-bottom: 14px; }
+.preview-work-group > .preview-chip { margin-bottom: 6px; display: inline-block; }
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
 .field-group { display: flex; flex-direction: column; gap: 4px; }
 .field-group.full { grid-column: 1 / -1; }
@@ -343,6 +355,13 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 0 24px 60px; }
   background: var(--input-bg); border-radius: 8px; padding: 10px 14px;
 }
 .order-item-btns button { margin-left: 4px; }
+.order-item-main { display: flex; flex-direction: column; gap: 4px; }
+.order-item-name { font-weight: 600; }
+.order-item-tags { display: flex; gap: 6px; }
+.order-tag {
+  font-size: 11px; color: var(--text-faint); background: var(--card);
+  border: 1px solid var(--border); border-radius: 5px; padding: 1px 7px;
+}
 
 /* 발표모드 */
 .present-overlay {
