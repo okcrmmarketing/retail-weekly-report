@@ -369,6 +369,12 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 0 24px 60px; }
 .order-item-name { font-weight: 600; font-size: 14px; }
 .order-item-team { font-weight: 400; color: var(--text-faint); font-size: 12px; }
 
+.order-team-group { border: 1px solid var(--border); border-radius: 10px; padding: 8px; background: #fff; }
+.order-team-header { background: var(--input-bg); }
+.order-member-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; padding-left: 18px; }
+.order-member-item { background: var(--card); border: 1px solid var(--border); padding: 8px 12px; }
+.order-member-item .order-item-name { font-weight: 500; font-size: 13px; }
+
 /* 발표모드 */
 .present-overlay {
   position: fixed; inset: 0; background: var(--bg); z-index: 100;

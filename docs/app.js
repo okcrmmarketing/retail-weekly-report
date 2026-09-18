@@ -524,15 +524,34 @@ async function loadPreviousWeekWork() {
 let activeOrderType = 'work';
 
 function defaultWorkOrder() { return state.teams.map((t) => t.key); }
-function defaultTrendOrder() {
-  const list = [];
-  state.teams.forEach((t) => (t.members || []).forEach((m) => list.push(t.key + '::' + m)));
-  return list;
-}
+
+// 트렌드보고 순서는 "팀 순서" + "그 팀 안에서의 팀원 순서" 2단계 구조다 --
+// [{teamKey, members:[이름, ...]}, ...] -- 팀 블록 자체의 위치를 옮기면 그 팀에 속한
+// 팀원 전체가 같이 움직이고, 팀원 순서는 같은 팀 블록 안에서만 바뀐다(다른 팀으로 못 넘어감).
 function ensureOrderShape() {
   if (!state.order || Array.isArray(state.order)) state.order = {};
   if (!Array.isArray(state.order.work) || !state.order.work.length) state.order.work = defaultWorkOrder();
-  if (!Array.isArray(state.order.trend) || !state.order.trend.length) state.order.trend = defaultTrendOrder();
+
+  // 예전 형식(문자열 "팀key::이름" 낱개 배열)이거나 비어있으면 팀 블록 구조로 새로 만든다.
+  const isBlockShape = Array.isArray(state.order.trend)
+    && state.order.trend.every((b) => b && typeof b === 'object' && Array.isArray(b.members));
+  const existing = isBlockShape ? state.order.trend : [];
+  const byTeam = new Map(existing.map((b) => [b.teamKey, b]));
+
+  // 팀 블록 순서: 기존에 저장된 팀 순서를 최대한 유지하고, 새로 생긴 팀만 뒤에 붙인다.
+  const orderedTeamKeys = [
+    ...existing.map((b) => b.teamKey).filter((k) => state.teams.some((t) => t.key === k)),
+    ...state.teams.map((t) => t.key).filter((k) => !byTeam.has(k)),
+  ];
+
+  state.order.trend = orderedTeamKeys.map((teamKey) => {
+    const team = state.teams.find((t) => t.key === teamKey);
+    const currentMembers = (team && team.members) || [];
+    const prevMembers = (byTeam.get(teamKey) || {}).members || [];
+    const kept = prevMembers.filter((m) => currentMembers.includes(m));
+    const added = currentMembers.filter((m) => !kept.includes(m));
+    return { teamKey, members: [...kept, ...added] };
+  });
 }
 
 function renderOrderList() {
@@ -569,33 +588,63 @@ function renderOrderList() {
       wrap.appendChild(el);
     });
   } else {
-    const order = state.order.trend;
-    order.forEach((key, idx) => {
-      const [teamKey, member] = key.split('::');
-      const team = state.teams.find((t) => t.key === teamKey);
+    const blocks = state.order.trend;
+    blocks.forEach((block, bIdx) => {
+      const team = state.teams.find((t) => t.key === block.teamKey);
       if (!team) return;
-      const el = document.createElement('div');
-      el.className = 'order-item';
-      el.innerHTML = `
-        <span class="order-item-name">${idx + 1}. ${escapeHtml(member)} <span class="order-item-team">(${escapeHtml(team.label)})</span></span>
-        <span class="order-item-btns">
-          <button class="btn btn-outline btn-xs" data-up>▲</button>
-          <button class="btn btn-outline btn-xs" data-down>▼</button>
-        </span>
+
+      const groupEl = document.createElement('div');
+      groupEl.className = 'order-team-group';
+      groupEl.innerHTML = `
+        <div class="order-item order-team-header">
+          <span class="order-item-name">${bIdx + 1}. ${escapeHtml(team.label)}</span>
+          <span class="order-item-btns">
+            <button class="btn btn-outline btn-xs" data-team-up>▲</button>
+            <button class="btn btn-outline btn-xs" data-team-down>▼</button>
+          </span>
+        </div>
+        <div class="order-member-list"></div>
       `;
-      el.querySelector('[data-up]').addEventListener('click', () => {
-        if (idx === 0) return;
-        [order[idx - 1], order[idx]] = [order[idx], order[idx - 1]];
+      groupEl.querySelector('[data-team-up]').addEventListener('click', () => {
+        if (bIdx === 0) return;
+        [blocks[bIdx - 1], blocks[bIdx]] = [blocks[bIdx], blocks[bIdx - 1]];
         renderOrderList();
         saveOrder();
       });
-      el.querySelector('[data-down]').addEventListener('click', () => {
-        if (idx === order.length - 1) return;
-        [order[idx + 1], order[idx]] = [order[idx], order[idx + 1]];
+      groupEl.querySelector('[data-team-down]').addEventListener('click', () => {
+        if (bIdx === blocks.length - 1) return;
+        [blocks[bIdx + 1], blocks[bIdx]] = [blocks[bIdx], blocks[bIdx + 1]];
         renderOrderList();
         saveOrder();
       });
-      wrap.appendChild(el);
+
+      const memberWrap = groupEl.querySelector('.order-member-list');
+      block.members.forEach((member, mIdx) => {
+        const memberEl = document.createElement('div');
+        memberEl.className = 'order-item order-member-item';
+        memberEl.innerHTML = `
+          <span class="order-item-name">${mIdx + 1}. ${escapeHtml(member)}</span>
+          <span class="order-item-btns">
+            <button class="btn btn-outline btn-xs" data-m-up>▲</button>
+            <button class="btn btn-outline btn-xs" data-m-down>▼</button>
+          </span>
+        `;
+        memberEl.querySelector('[data-m-up]').addEventListener('click', () => {
+          if (mIdx === 0) return;
+          [block.members[mIdx - 1], block.members[mIdx]] = [block.members[mIdx], block.members[mIdx - 1]];
+          renderOrderList();
+          saveOrder();
+        });
+        memberEl.querySelector('[data-m-down]').addEventListener('click', () => {
+          if (mIdx === block.members.length - 1) return;
+          [block.members[mIdx + 1], block.members[mIdx]] = [block.members[mIdx], block.members[mIdx + 1]];
+          renderOrderList();
+          saveOrder();
+        });
+        memberWrap.appendChild(memberEl);
+      });
+
+      wrap.appendChild(groupEl);
     });
   }
 }
@@ -672,15 +721,16 @@ function buildPresentSlides() {
   // 트렌드보고는 팀 단위가 아니라 팀원(발표자) 단위로 순서를 따로 정할 수 있어야 한다는
   // 요청(2026-09-18)에 따라, 팀별로 묶어서 한 슬라이드에 여러 명을 보여주던 방식에서
   // "발표자 1명 = 슬라이드 1장"으로 바꿨다 -- order.trend에 담긴 "팀key::이름" 순서 그대로.
-  state.order.trend.forEach((key) => {
-    const [teamKey, member] = key.split('::');
-    const team = state.teams.find((t) => t.key === teamKey);
+  state.order.trend.forEach((block) => {
+    const team = state.teams.find((t) => t.key === block.teamKey);
     if (!team) return;
-    const items = (state.trend[teamKey] || { items: [] }).items;
-    const entry = items.find((it) => it.author === member);
-    if (!entry) return;
-    if (!(entry.title || entry.content || (entry.images || []).length)) return;
-    slides.push({ type: 'trend', team, member, trend: [entry] });
+    const items = (state.trend[block.teamKey] || { items: [] }).items;
+    block.members.forEach((member) => {
+      const entry = items.find((it) => it.author === member);
+      if (!entry) return;
+      if (!(entry.title || entry.content || (entry.images || []).length)) return;
+      slides.push({ type: 'trend', team, member, trend: [entry] });
+    });
   });
 
   return slides;
