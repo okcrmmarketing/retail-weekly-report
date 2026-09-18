@@ -400,7 +400,7 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 0 24px 60px; }
 .present-work-table tbody td { padding: 10px 14px; vertical-align: top; }
 .present-work-table tbody tr.group-start:not(:first-child) td { border-top: 1px solid var(--border); }
 .present-work-table tbody td.col-date, .present-work-table tbody td.col-note { text-align: center; color: var(--text-muted); white-space: nowrap; }
-.present-work-table td.col-category { padding: 0 !important; width: 90px; }
+.present-work-table td.col-category { padding: 0 !important; width: 90px; height: 1px; }
 .present-work-table td.col-category .preview-chip {
   height: 100%; display: flex; align-items: center; justify-content: center; text-align: center;
   border-radius: 0; white-space: normal; word-break: keep-all; padding: 8px 6px;
