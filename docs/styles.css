@@ -117,7 +117,7 @@ html, body {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
-  border-radius: var(--radius);
+  border-radius: 0 var(--radius) var(--radius) var(--radius);
   box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 .team-tabs { display: flex; gap: 22px; flex-wrap: wrap; }
@@ -171,7 +171,7 @@ html, body {
 .subtitle { color: var(--text-muted); font-size: 13px; margin: 4px 0 14px; }
 
 /* ---------------- 메인 레이아웃 ---------------- */
-main#mainContent { max-width: 1180px; margin: 0 auto; padding: 16px 24px 60px; }
+main#mainContent { max-width: 1180px; margin: 0 auto; padding: 0 24px 60px; }
 .tab-panel { display: none; }
 .tab-panel.active { display: block; }
 

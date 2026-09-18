@@ -39,12 +39,20 @@ function formatDueDate(dateStr) {
   return `~${Number(parts[1])}/${Number(parts[2])}`;
 }
 
+function weekOfMonthLabel(weekId) {
+  const monday = weekIdToMonday(weekId);
+  const year = monday.getUTCFullYear();
+  const month = monday.getUTCMonth() + 1;
+  const weekOfMonth = Math.ceil(monday.getUTCDate() / 7);
+  return `${year}년 ${month}월 ${weekOfMonth}주차`;
+}
+
 function weekLabel(weekId) {
   const monday = weekIdToMonday(weekId);
   const sunday = new Date(monday);
   sunday.setUTCDate(monday.getUTCDate() + 6);
   const fmt = (d) => `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
-  return `${weekId} (${fmt(monday)}~${fmt(sunday)})`;
+  return `${weekOfMonthLabel(weekId)} (${fmt(monday)}~${fmt(sunday)})`;
 }
 
 // ---------------- 전역 상태 ----------------
@@ -86,7 +94,7 @@ function stripUiState(items) {
 }
 
 async function loadWeek() {
-  document.getElementById('weekLabel').textContent = weekLabel(state.week).split(' ')[0];
+  document.getElementById('weekLabel').textContent = weekOfMonthLabel(state.week);
   try {
     const data = await apiGet('/api/bootstrap?week=' + encodeURIComponent(state.week));
     state.teams = data.teams;
@@ -503,13 +511,21 @@ async function saveOrder() {
 // ---------------- 발표모드 ----------------
 let presentIdx = 0;
 function buildPresentSlides() {
-  return state.order.map((teamKey) => {
+  const slides = [];
+  state.order.forEach((teamKey) => {
     const team = state.teams.find((t) => t.key === teamKey);
+    if (!team) return;
     const work = (state.work[teamKey] || { items: [] }).items;
-    const trend = (state.trend[teamKey] || { items: [] }).items;
     const vacation = (state.vacation[teamKey] || { items: [] }).items;
-    return { team, work, trend, vacation };
-  }).filter((s) => s.team);
+    const trendAll = (state.trend[teamKey] || { items: [] }).items;
+    const members = team.members || [];
+    const trend = (members.length ? members.map((m) => trendAll.find((it) => it.author === m)).filter(Boolean) : trendAll)
+      .filter((t) => t.title || t.content || (t.images || []).length);
+
+    if (work.length || vacation.length) slides.push({ type: 'work', team, work, vacation });
+    if (trend.length) slides.push({ type: 'trend', team, trend });
+  });
+  return slides;
 }
 
 function renderPresentDots(slides) {
@@ -530,49 +546,54 @@ function renderPresentSlide() {
   const s = slides[presentIdx];
   document.getElementById('presentPageNum').textContent = presentIdx + 1;
   document.getElementById('presentPageTotal').textContent = slides.length;
-  document.getElementById('presentWeekLabel').textContent = weekLabel(state.week).split(' ')[0];
+  document.getElementById('presentWeekLabel').textContent = weekOfMonthLabel(state.week);
   renderPresentDots(slides);
 
-  const workRowsHtml = s.work.length
-    ? s.work.map((w) => `
-        <tr>
-          <td>
-            <span class="preview-chip">${escapeHtml(w.category || '-')}</span>
-            <p class="present-work-title">${escapeHtml(w.title || '(제목 없음)')}</p>
-            ${w.detail ? `<p class="present-work-detail">${escapeHtml(w.detail)}</p>` : ''}
-          </td>
-          <td class="col-date">${w.ongoing ? '계속 진행' : (formatDueDate(w.dueDate) ? formatDueDate(w.dueDate).replace('~', '') : '-')}</td>
-          <td class="col-note">${escapeHtml(w.note || '-')}</td>
-        </tr>`).join('')
-    : '';
+  if (s.type === 'work') {
+    const workRowsHtml = s.work.length
+      ? s.work.map((w) => `
+          <tr>
+            <td>
+              <span class="preview-chip">${escapeHtml(w.category || '-')}</span>
+              <p class="present-work-title">${escapeHtml(w.title || '(제목 없음)')}</p>
+              ${w.detail ? `<p class="present-work-detail">${escapeHtml(w.detail)}</p>` : ''}
+            </td>
+            <td class="col-date">${w.ongoing ? '계속 진행' : (formatDueDate(w.dueDate) ? formatDueDate(w.dueDate).replace('~', '') : '-')}</td>
+            <td class="col-note">${escapeHtml(w.note || '-')}</td>
+          </tr>`).join('')
+      : '';
 
-  const workHtml = s.work.length
-    ? `<table class="present-work-table">
-        <thead><tr><th>이번주 업무</th><th class="col-date">진행날짜</th><th class="col-note">비고</th></tr></thead>
-        <tbody>${workRowsHtml}</tbody>
-      </table>`
-    : '<p class="present-empty-note">등록된 업무보고가 없습니다.</p>';
+    const workHtml = s.work.length
+      ? `<table class="present-work-table">
+          <thead><tr><th>이번주 업무</th><th class="col-date">진행날짜</th><th class="col-note">비고</th></tr></thead>
+          <tbody>${workRowsHtml}</tbody>
+        </table>`
+      : '<p class="present-empty-note">등록된 업무보고가 없습니다.</p>';
 
-  const vacHtml = s.vacation.length
-    ? `<div class="present-vac-line"><span class="label">이번 주 휴가자</span><span class="val">${s.vacation.map((v) => `${escapeHtml(v.name || '-')} (${escapeHtml(v.period || '-')})`).join(', ')}</span></div>`
-    : `<div class="present-vac-line"><span class="label">이번 주 휴가자</span><span class="val">없음</span></div>`;
+    const vacHtml = s.vacation.length
+      ? `<div class="present-vac-line"><span class="label">이번 주 휴가자</span><span class="val">${s.vacation.map((v) => `${escapeHtml(v.name || '-')} (${escapeHtml(v.period || '-')})`).join(', ')}</span></div>`
+      : `<div class="present-vac-line"><span class="label">이번 주 휴가자</span><span class="val">없음</span></div>`;
 
-  const trendHtml = s.trend.length
-    ? s.trend.filter((t) => t.title || t.content || (t.images || []).length).map((t) => `
+    document.getElementById('presentSlide').innerHTML = `
+      <h2>${escapeHtml(s.team.label)} 주간업무 보고</h2>
+      <hr class="present-divider" />
+      ${workHtml}
+      ${vacHtml}
+    `;
+  } else {
+    const trendHtml = s.trend.map((t) => `
         <div class="present-trend-block">
           <b>${t.author ? escapeHtml(t.author) + ' · ' : ''}${escapeHtml(t.title || '(제목 없음)')}</b>
           <p>${escapeHtml(t.content || '')}</p>
           ${(t.images || []).map((src) => `<img src="${src}" />`).join('')}
-        </div>`).join('')
-    : '';
+        </div>`).join('');
 
-  document.getElementById('presentSlide').innerHTML = `
-    <h2>${escapeHtml(s.team.label)} 주간업무 보고</h2>
-    <hr class="present-divider" />
-    ${workHtml}
-    ${vacHtml}
-    ${trendHtml ? `<h3>트렌드보고</h3>${trendHtml}` : ''}
-  `;
+    document.getElementById('presentSlide').innerHTML = `
+      <h2>${escapeHtml(s.team.label)} 트렌드보고</h2>
+      <hr class="present-divider" />
+      ${trendHtml}
+    `;
+  }
 }
 
 function startPresent() {
