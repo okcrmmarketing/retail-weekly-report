@@ -280,18 +280,18 @@ function buildWorkPreviewHtml(team) {
       body += '<div class="preview-block"><p class="preview-block-title">이번주 업무</p>';
       body += groups.filter((g) => (g.tasks || []).length).map((g) => `
         <div class="preview-work-group">
-          ${(g.tasks || []).map((it, i) => `
-            <div class="preview-work-item">
-              <div class="preview-work-chipcol">${i === 0 ? `<span class="preview-chip">${escapeHtml(g.category || '-')}</span>` : ''}</div>
-              <div class="preview-work-main">
+          <div class="preview-work-groupchip"><span class="preview-chip">${escapeHtml(g.category || '-')}</span></div>
+          <div class="preview-work-tasks">
+            ${(g.tasks || []).map((it) => `
+              <div class="preview-work-item">
                 <div class="preview-work-titleline">
                   <span class="preview-work-title">${escapeHtml(it.title || '(제목 없음)')}</span>
                   <span class="due">${it.ongoing ? '계속' : formatDueDate(it.dueDate)}</span>
                 </div>
                 ${it.detail ? `<p class="preview-work-detail">${escapeHtml(it.detail)}</p>` : ''}
                 ${it.note ? `<p class="preview-work-detail hint">비고: ${escapeHtml(it.note)}</p>` : ''}
-              </div>
-            </div>`).join('')}
+              </div>`).join('')}
+          </div>
         </div>`).join('');
       body += '</div>';
     }
@@ -603,25 +603,24 @@ function renderPresentSlide() {
   if (s.type === 'work') {
     const hasWork = s.workGroups.some((g) => (g.tasks || []).length);
     const workRowsHtml = hasWork
-      ? s.workGroups.flatMap((g) => (g.tasks || []).map((w, i) => `
+      ? s.workGroups.filter((g) => (g.tasks || []).length).flatMap((g) => {
+          const tasks = g.tasks || [];
+          return tasks.map((w, i) => `
           <tr class="${i === 0 ? 'group-start' : ''}">
+            ${i === 0 ? `<td class="col-category" rowspan="${tasks.length}"><span class="preview-chip">${escapeHtml(g.category || '-')}</span></td>` : ''}
             <td>
-              <div class="present-work-row-flex">
-                <div class="present-work-chipcol">${i === 0 ? `<span class="preview-chip">${escapeHtml(g.category || '-')}</span>` : ''}</div>
-                <div class="present-work-main">
-                  <span class="present-work-title">${escapeHtml(w.title || '(제목 없음)')}</span>
-                  ${w.detail ? `<p class="present-work-detail">${escapeHtml(w.detail)}</p>` : ''}
-                </div>
-              </div>
+              <span class="present-work-title">${escapeHtml(w.title || '(제목 없음)')}</span>
+              ${w.detail ? `<p class="present-work-detail">${escapeHtml(w.detail)}</p>` : ''}
             </td>
             <td class="col-date">${w.ongoing ? '계속 진행' : (formatDueDate(w.dueDate) ? formatDueDate(w.dueDate).replace('~', '') : '-')}</td>
             <td class="col-note">${escapeHtml(w.note || '-')}</td>
-          </tr>`)).join('')
+          </tr>`);
+        }).join('')
       : '';
 
     const workHtml = hasWork
       ? `<table class="present-work-table">
-          <thead><tr><th>이번주 업무</th><th class="col-date">진행날짜</th><th class="col-note">비고</th></tr></thead>
+          <thead><tr><th class="col-category">카테고리</th><th>업무</th><th class="col-date">진행날짜</th><th class="col-note">비고</th></tr></thead>
           <tbody>${workRowsHtml}</tbody>
         </table>`
       : '<p class="present-empty-note">등록된 업무보고가 없습니다.</p>';
