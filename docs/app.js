@@ -206,7 +206,7 @@ function renderWorkEdit() {
           <div class="field-group">
             <label>완료예정일</label>
             <div class="due-date-row">
-              <input type="text" inputmode="numeric" maxlength="8" placeholder="20260930" value="${escapeAttr(toPlainDate(task.dueDate))}" data-f="dueDate" data-date-input ${task.ongoing ? 'disabled' : ''} />
+              <input type="text" inputmode="numeric" maxlength="8" placeholder="YYYYMMDD" value="${escapeAttr(toPlainDate(task.dueDate))}" data-f="dueDate" data-date-input ${task.ongoing ? 'disabled' : ''} />
               <button class="btn btn-toggle btn-xs ${task.ongoing ? 'active' : ''}" data-toggle-ongoing type="button">계속</button>
             </div>
           </div>
