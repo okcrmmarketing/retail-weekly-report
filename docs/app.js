@@ -1026,7 +1026,7 @@ function sanitizeRichContent(root) {
         } else if (tag === 'b' || tag === 'strong') {
           out += `<b>${walk(child)}</b>`;
         } else if (tag === 'span' || tag === 'font') {
-          const color = child.style && child.style.color;
+          const color = (child.style && child.style.color) || child.getAttribute('color');
           const inner = walk(child);
           out += color ? `<span style="color:${color}">${inner}</span>` : inner;
         } else if (tag === 'div' || tag === 'p') {
@@ -1049,16 +1049,62 @@ function sanitizeRichContent(root) {
   return html;
 }
 
+// execCommand는 브라우저에 따라 <font color>처럼 정제 로직이 못 알아보는 형태로 결과물을
+// 만들 때가 있어(2026-09-18, 색상이 미리보기에 반영 안 되던 문제) -- 직접 선택영역을
+// <span style="color:...">/<b>로 감싸서 결과 HTML 구조를 확실히 통제한다.
+function applyInlineWrap(makeWrapper) {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return false;
+  const range = sel.getRangeAt(0);
+  const wrapper = makeWrapper();
+  try {
+    range.surroundContents(wrapper);
+  } catch (e) {
+    // 선택 영역이 여러 태그에 걸쳐 있으면 surroundContents가 실패한다(표준 제약) --
+    // 그럴 땐 선택된 내용을 통째로 꺼내 새 wrapper 안에 넣는 방식으로 우회한다.
+    const frag = range.extractContents();
+    wrapper.appendChild(frag);
+    range.insertNode(wrapper);
+  }
+  sel.removeAllRanges();
+  const newRange = document.createRange();
+  newRange.selectNodeContents(wrapper);
+  sel.addRange(newRange);
+  return true;
+}
+
 function wireRichToolbar(contentInput) {
   const toolbar = contentInput.previousElementSibling;
   if (!toolbar || !toolbar.classList.contains('rich-toolbar')) return;
-  toolbar.querySelectorAll('[data-cmd]').forEach((btn) => {
+  toolbar.querySelectorAll('[data-cmd="bold"]').forEach((btn) => {
     btn.onmousedown = (e) => e.preventDefault(); // 클릭해도 에디터 포커스/선택영역이 안 풀리게
-    btn.onclick = () => { document.execCommand(btn.dataset.cmd, false, null); contentInput.dispatchEvent(new Event('input')); };
+    btn.onclick = () => {
+      if (!applyInlineWrap(() => document.createElement('b'))) { alert('먼저 굵게 처리할 글자를 드래그해서 선택해주세요.'); return; }
+      contentInput.dispatchEvent(new Event('input'));
+    };
+  });
+  toolbar.querySelectorAll('[data-cmd="removeFormat"]').forEach((btn) => {
+    btn.onmousedown = (e) => e.preventDefault();
+    btn.onclick = () => {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0 || sel.isCollapsed) { alert('먼저 서식을 지울 글자를 드래그해서 선택해주세요.'); return; }
+      const text = sel.getRangeAt(0).toString();
+      sel.getRangeAt(0).deleteContents();
+      sel.getRangeAt(0).insertNode(document.createTextNode(text));
+      contentInput.dispatchEvent(new Event('input'));
+    };
   });
   toolbar.querySelectorAll('[data-color]').forEach((btn) => {
     btn.onmousedown = (e) => e.preventDefault();
-    btn.onclick = () => { document.execCommand('foreColor', false, btn.dataset.color); contentInput.dispatchEvent(new Event('input')); };
+    btn.onclick = () => {
+      const ok = applyInlineWrap(() => {
+        const span = document.createElement('span');
+        span.style.color = btn.dataset.color;
+        return span;
+      });
+      if (!ok) { alert('먼저 색을 바꿀 글자를 드래그해서 선택해주세요.'); return; }
+      contentInput.dispatchEvent(new Event('input'));
+    };
   });
 }
 
