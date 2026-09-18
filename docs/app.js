@@ -475,7 +475,6 @@ function buildTrendPreviewHtml(team) {
       return `
         <div class="preview-trend-item">
           <p class="preview-trend-title">${escapeHtml(t.title || '(제목 없음)')}</p>
-          <p class="preview-trend-author">작성자 · ${escapeHtml(t.author || '')}</p>
           <div class="preview-trend-body ${layoutClass}">
             ${imgsHtml ? `<div class="preview-trend-imgs">${imgsHtml}</div>` : ''}
             <p class="preview-trend-content">${t.content || ''}</p>
@@ -484,8 +483,10 @@ function buildTrendPreviewHtml(team) {
     }).join('');
   }
   return `
-    <p class="print-dept-header">${escapeHtml(state.activeTrendAuthor || '')}</p>
-    <h2 class="preview-title">${escapeHtml(team.label)} 트렌드보고</h2>
+    <div class="preview-title-row">
+      <h2 class="preview-title">${escapeHtml(team.label)} 트렌드보고</h2>
+      <span class="print-dept-header">${escapeHtml(state.activeTrendAuthor || '')}</span>
+    </div>
     <p class="preview-subtitle">${escapeHtml(weekLabel(state.week))}</p>
     <hr class="preview-divider" />
     ${body}
@@ -900,15 +901,25 @@ function downloadPreview(type) {
   downloadText(`${team.label}_${label}_${state.week}.txt`, previewToText(team, type));
 }
 
+// 브라우저 인쇄 대화상자의 "머리글/바닥글" 옵션이 켜져 있으면 문서 제목("리테일기획부
+// 주간업무")이 각 페이지 상단에 자동으로 찍힌다 -- 우리 쪽 CSS로는 손댈 수 없는 브라우저
+// 자체 영역이라, 인쇄하는 순간만 document.title을 비워서 그 문구가 안 뜨게 우회한다.
+function withBlankTitle(fn) {
+  const orig = document.title;
+  document.title = '';
+  fn();
+  document.title = orig;
+}
+
 function printPreview(type) {
-  window.print();
+  withBlankTitle(() => window.print());
 }
 
 function printAllPreview(type) {
   const area = document.getElementById('printAllArea');
   area.innerHTML = state.teams.map((team) => `<div class="preview-card">${type === 'work' ? buildWorkPreviewHtml(team) : buildTrendPreviewHtml(team)}</div>`).join('');
   area.classList.add('active');
-  window.print();
+  withBlankTitle(() => window.print());
   setTimeout(() => { area.classList.remove('active'); area.innerHTML = ''; }, 500);
 }
 

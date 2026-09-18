@@ -505,6 +505,7 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 0 24px 60px; }
 
 /* ---------------- 인쇄 ---------------- */
 .print-dept-header { display: none; }
+.preview-title-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 @media print {
   .app-header, .type-tabs, .panel-toolbar, .edit-col, .preview-actions,
   .present-topbar, .present-bottom-nav { display: none !important; }
@@ -516,13 +517,13 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 0 24px 60px; }
   .print-only-area .preview-card { page-break-after: always; }
 
   .print-dept-header {
-    display: block; text-align: right; font-size: 12px; font-weight: 700;
-    color: var(--text); margin-bottom: 10px;
+    display: block; text-align: right; font-size: 13px; font-weight: 700;
+    color: var(--text); white-space: nowrap;
   }
 
   /* 인쇄할 때는 화면용 연한 회색 글자를 전부 검정으로 바꿔 가독성을 높인다. */
   .preview-work-detail, .preview-work-detail.hint, .preview-vac-line, .preview-vac-line .val,
-  .preview-work-titleline .due, .preview-subtitle, .preview-trend-author, .preview-trend-content,
+  .preview-work-titleline .due, .preview-subtitle, .preview-trend-content,
   .hint {
     color: #000 !important;
   }
