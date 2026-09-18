@@ -249,8 +249,11 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 0 24px 60px; }
 .item-card.dragging { opacity: 0.4; }
 .item-card.drag-over { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
 
-.task-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 8px; }
-.task-block { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; background: var(--input-bg); }
+.task-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+.task-block { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px; background: var(--input-bg); }
+.task-block .field-row { margin-bottom: 6px; }
+.task-block .field-row:last-child { margin-bottom: 0; }
+.task-block-top { margin-bottom: 6px !important; }
 .task-block-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .task-block-label { font-size: 12px; font-weight: 700; color: var(--text-faint); }
 .task-title-row { grid-template-columns: 1.6fr 1fr; }
@@ -279,8 +282,6 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 0 24px 60px; }
 .btn-toggle { background: var(--card); border-color: var(--border); color: var(--text-muted); }
 .btn-toggle:hover { border-color: var(--accent); color: var(--accent); }
 .btn-toggle.active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
-.note-toggle { font-size: 12px; color: var(--text-faint); cursor: pointer; background: none; border: none; padding: 0; margin-bottom: 8px; }
-.note-toggle:hover { color: var(--accent); }
 
 /* 휴가자 행 */
 .vac-rows-wrap { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
@@ -395,11 +396,11 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 0 24px 60px; }
   background: var(--text); color: #fff; text-align: left; font-size: 12px;
   padding: 10px 14px; font-weight: 700;
 }
-.present-work-table thead th.col-date, .present-work-table thead th.col-note { text-align: center; width: 110px; }
+.present-work-table thead th.col-date { text-align: center; width: 110px; }
 .present-work-table thead th.col-category { text-align: center; width: 90px; }
 .present-work-table tbody td { padding: 10px 14px; vertical-align: top; }
 .present-work-table tbody tr.group-start:not(:first-child) td { border-top: 1px solid var(--border); }
-.present-work-table tbody td.col-date, .present-work-table tbody td.col-note { text-align: center; color: var(--text-muted); white-space: nowrap; }
+.present-work-table tbody td.col-date { text-align: center; color: var(--text-muted); white-space: nowrap; }
 .present-work-table td.col-category { padding: 0 !important; width: 90px; height: 1px; }
 .present-work-table td.col-category .preview-chip {
   height: 100%; display: flex; align-items: center; justify-content: center; text-align: center;

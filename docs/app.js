@@ -172,7 +172,7 @@ function renderWorkEdit() {
       renderWorkEdit();
     });
     card.querySelector('[data-add-task]').addEventListener('click', () => {
-      group.tasks.push({ title: '', detail: '', dueDate: '', ongoing: false, note: '' });
+      group.tasks.push({ title: '', detail: '', dueDate: '', ongoing: false });
       renderWorkEdit();
     });
 
@@ -180,7 +180,6 @@ function renderWorkEdit() {
     group.tasks.forEach((task, tIdx) => {
       const block = document.createElement('div');
       block.className = 'task-block';
-      const noteOpen = task.__noteOpen || !!task.note;
       block.innerHTML = `
         <div class="task-block-top">
           <span class="task-block-label">업무 ${tIdx + 1}</span>
@@ -199,10 +198,6 @@ function renderWorkEdit() {
         <div class="field-row">
           <div class="field-group full"><label>상세내용</label><textarea rows="2" placeholder="업무 상세내용 작성" data-f="detail">${escapeHtml(task.detail)}</textarea></div>
         </div>
-        <div class="field-row ${noteOpen ? '' : 'hidden'}" data-note-row>
-          <div class="field-group full"><label>비고</label><input placeholder="비고" value="${escapeAttr(task.note)}" data-f="note" /></div>
-        </div>
-        <button class="note-toggle ${noteOpen ? 'hidden' : ''}" data-note-toggle type="button">⌄ 비고 추가</button>
       `;
       block.querySelectorAll('[data-f]').forEach((el) => {
         el.addEventListener('input', () => { task[el.dataset.f] = el.value; });
@@ -215,12 +210,6 @@ function renderWorkEdit() {
         task.ongoing = !task.ongoing;
         if (task.ongoing) task.dueDate = '';
         renderWorkEdit();
-      });
-      const toggleBtn = block.querySelector('[data-note-toggle]');
-      toggleBtn.addEventListener('click', () => {
-        task.__noteOpen = true;
-        block.querySelector('[data-note-row]').classList.remove('hidden');
-        toggleBtn.classList.add('hidden');
       });
       tasksWrap.appendChild(block);
     });
@@ -289,7 +278,6 @@ function buildWorkPreviewHtml(team) {
                   <span class="due">${it.ongoing ? '계속' : formatDueDate(it.dueDate)}</span>
                 </div>
                 ${it.detail ? `<p class="preview-work-detail">${escapeHtml(it.detail)}</p>` : ''}
-                ${it.note ? `<p class="preview-work-detail hint">비고: ${escapeHtml(it.note)}</p>` : ''}
               </div>`).join('')}
           </div>
         </div>`).join('');
@@ -613,14 +601,13 @@ function renderPresentSlide() {
               ${w.detail ? `<p class="present-work-detail">${escapeHtml(w.detail)}</p>` : ''}
             </td>
             <td class="col-date">${w.ongoing ? '계속 진행' : (formatDueDate(w.dueDate) ? formatDueDate(w.dueDate).replace('~', '') : '-')}</td>
-            <td class="col-note">${escapeHtml(w.note || '-')}</td>
           </tr>`);
         }).join('')
       : '';
 
     const workHtml = hasWork
       ? `<table class="present-work-table">
-          <thead><tr><th class="col-category">카테고리</th><th>업무</th><th class="col-date">진행날짜</th><th class="col-note">비고</th></tr></thead>
+          <thead><tr><th class="col-category">카테고리</th><th>업무</th><th class="col-date">진행날짜</th></tr></thead>
           <tbody>${workRowsHtml}</tbody>
         </table>`
       : '<p class="present-empty-note">등록된 업무보고가 없습니다.</p>';
@@ -680,7 +667,7 @@ function previewToText(team, type) {
     groups.forEach((g) => {
       (g.tasks || []).forEach((it) => {
         const due = it.ongoing ? '계속' : (it.dueDate || '-');
-        out += `  - [${g.category || '-'}] ${it.title || ''} ${it.detail || ''} (예정일: ${due}${it.note ? ', 비고: ' + it.note : ''})\n`;
+        out += `  - [${g.category || '-'}] ${it.title || ''} ${it.detail || ''} (예정일: ${due})\n`;
       });
     });
     out += '\n■ 이번 주 휴가자\n';
@@ -889,7 +876,7 @@ function wireWorkPanel() {
   document.getElementById('addWorkItemBtn').addEventListener('click', () => {
     const team = currentTeam();
     if (!team) return;
-    state.work[team.key].items.push({ category: '', tasks: [{ title: '', detail: '', dueDate: '', ongoing: false, note: '' }] });
+    state.work[team.key].items.push({ category: '', tasks: [{ title: '', detail: '', dueDate: '', ongoing: false }] });
     renderWorkEdit();
   });
   document.getElementById('addVacationBtn').addEventListener('click', () => {
