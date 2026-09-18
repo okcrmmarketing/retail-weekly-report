@@ -1030,7 +1030,13 @@ function sanitizeRichContent(root) {
           const inner = walk(child);
           out += color ? `<span style="color:${color}">${inner}</span>` : inner;
         } else if (tag === 'div' || tag === 'p') {
-          out += walk(child) + '<br>';
+          // 컨텐트에디터블은 첫 줄만 루트에 맨 텍스트로 두고, 엔터로 나뉜 그 다음 줄부터
+          // <div>로 감싸는 경우가 많다(크롬/엣지 공통) -- 그래서 div 앞에 줄바꿈이 이미
+          // 있는지가 아니라 "이 div 앞에 뭔가 내용이 있었는지"로 판단해서 줄바꿈을 넣어야
+          // 첫 줄과 둘째 줄이 안 붙는다. 뒤에 또 붙이면(기존 방식) 마지막에 빈 줄이
+          // 계속 쌓여서 아래 trailing-<br> 정리로 따로 걷어낸다.
+          if (out !== '') out += '<br>';
+          out += walk(child);
         } else {
           out += walk(child);
         }
