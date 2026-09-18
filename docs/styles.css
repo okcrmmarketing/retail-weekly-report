@@ -393,33 +393,35 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 0 24px 60px; }
   box-shadow: 0 1px 3px rgba(0,0,0,0.06);
   box-sizing: border-box;
   overflow: hidden;
+  display: flex; flex-direction: column; justify-content: center;
 }
-.present-slide h2 { font-size: 22px; font-weight: 800; margin: 0 0 4px; }
-.present-slide h3 { font-size: 14px; color: var(--accent); margin: 20px 0 8px; font-weight: 700; }
-.present-divider { border: none; border-top: 2px solid var(--text); margin: 10px 0 18px; }
+.present-slide h2 { font-size: 27px; font-weight: 800; margin: 0 0 4px; color: var(--text); }
+.present-slide h3 { font-size: 17px; color: var(--accent); margin: 20px 0 8px; font-weight: 700; }
+.present-divider { border: none; border-top: 2px solid var(--text); margin: 10px 0 20px; }
 
-.present-work-table { width: 100%; border-collapse: collapse; border: 1px solid var(--text); font-size: 13px; }
+.present-work-table { width: 100%; border-collapse: collapse; border: 1px solid var(--text); font-size: 15px; }
 .present-work-table thead th {
-  background: var(--text); color: #fff; text-align: left; font-size: 12px;
-  padding: 10px 14px; font-weight: 700;
+  background: var(--text); color: #fff; text-align: left; font-size: 14px;
+  padding: 12px 14px; font-weight: 700;
 }
 .present-work-table thead th.col-date { text-align: center; width: 110px; }
 .present-work-table thead th.col-category { text-align: center; width: 90px; }
-.present-work-table tbody td { padding: 10px 14px; vertical-align: top; }
+.present-work-table thead th.col-task { text-align: center; }
+.present-work-table tbody td { padding: 12px 14px; vertical-align: top; }
 .present-work-table tbody tr.group-start:not(:first-child) td { border-top: 1px solid var(--border); }
-.present-work-table tbody td.col-date { text-align: center; color: var(--text-muted); white-space: nowrap; }
+.present-work-table tbody td.col-date { text-align: center; color: var(--text); white-space: nowrap; }
 .present-work-table td.col-category { padding: 0 !important; width: 90px; height: 1px; }
 .present-work-table td.col-category .preview-chip {
   height: 100%; display: flex; align-items: center; justify-content: center; text-align: center;
-  border-radius: 0; white-space: normal; word-break: keep-all; padding: 8px 6px;
+  border-radius: 0; white-space: normal; word-break: keep-all; padding: 8px 6px; font-size: 13px;
 }
-.present-work-title { font-weight: 700; font-size: 14px; }
-.present-work-detail { font-size: 12px; color: var(--text-faint); margin: 4px 0 0; white-space: pre-wrap; }
-.present-empty-note { color: var(--text-faint); font-size: 13px; padding: 10px 0; }
+.present-work-title { font-weight: 700; font-size: 16px; color: var(--text); }
+.present-work-detail { font-size: 14px; color: var(--text); margin: 4px 0 0; white-space: pre-wrap; }
+.present-empty-note { color: var(--text-faint); font-size: 14px; padding: 10px 0; }
 
-.present-vac-line { margin-top: 16px; font-size: 13px; }
-.present-vac-line .label { font-weight: 700; margin-right: 8px; }
-.present-vac-line .val { color: var(--text-muted); }
+.present-vac-line { margin-top: 18px; font-size: 15px; }
+.present-vac-line .label { font-weight: 700; margin-right: 8px; color: var(--text); }
+.present-vac-line .val { color: var(--text); }
 
 .present-trend-block { margin-bottom: 16px; }
 .present-trend-block p { white-space: pre-wrap; }

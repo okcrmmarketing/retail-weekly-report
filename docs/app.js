@@ -664,7 +664,7 @@ function renderPresentSlide() {
 
     const workHtml = s.rows.length
       ? `<table class="present-work-table">
-          <thead><tr><th class="col-category">카테고리</th><th>업무</th><th class="col-date">진행날짜</th></tr></thead>
+          <thead><tr><th class="col-category">카테고리</th><th class="col-task">업무</th><th class="col-date">진행날짜</th></tr></thead>
           <tbody>${workRowsHtml}</tbody>
         </table>`
       : '<p class="present-empty-note">등록된 업무보고가 없습니다.</p>';
