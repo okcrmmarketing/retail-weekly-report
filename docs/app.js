@@ -602,7 +602,7 @@ function renderPresentSlide() {
     const hasWork = s.workGroups.some((g) => (g.tasks || []).length);
     const workRowsHtml = hasWork
       ? s.workGroups.flatMap((g) => (g.tasks || []).map((w, i) => `
-          <tr>
+          <tr class="${i === 0 ? 'group-start' : ''}">
             <td>
               <div class="present-work-title-row">
                 ${i === 0 ? `<span class="preview-chip">${escapeHtml(g.category || '-')}</span>` : `<span class="preview-chip preview-chip-spacer">${escapeHtml(g.category || '-')}</span>`}
