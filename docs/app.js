@@ -32,6 +32,13 @@ function addWeeks(weekId, delta) {
   return getISOWeekId(monday);
 }
 
+function formatDueDate(dateStr) {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  return `~${Number(parts[1])}/${Number(parts[2])}`;
+}
+
 function weekLabel(weekId) {
   const monday = weekIdToMonday(weekId);
   const sunday = new Date(monday);
@@ -146,7 +153,13 @@ function renderWorkEdit() {
       </div>
       <div class="field-row">
         <div class="field-group"><label>카테고리</label><input placeholder="카테고리 작성" value="${escapeAttr(item.category)}" data-f="category" /></div>
-        <div class="field-group"><label>완료예정일</label><input type="date" value="${escapeAttr(item.dueDate)}" data-f="dueDate" /></div>
+        <div class="field-group">
+          <label>완료예정일</label>
+          <div class="due-date-row">
+            <input type="date" value="${escapeAttr(item.dueDate)}" data-f="dueDate" ${item.ongoing ? 'disabled' : ''} />
+            <button class="btn btn-outline btn-xs ${item.ongoing ? 'active' : ''}" data-toggle-ongoing type="button">계속</button>
+          </div>
+        </div>
       </div>
       <div class="field-row">
         <div class="field-group full"><label>업무 제목</label><input placeholder="업무 제목 작성" value="${escapeAttr(item.title)}" data-f="title" /></div>
@@ -164,6 +177,11 @@ function renderWorkEdit() {
     });
     card.querySelector('[data-del]').addEventListener('click', () => {
       items.splice(idx, 1);
+      renderWorkEdit();
+    });
+    card.querySelector('[data-toggle-ongoing]').addEventListener('click', () => {
+      item.ongoing = !item.ongoing;
+      if (item.ongoing) item.dueDate = '';
       renderWorkEdit();
     });
     const toggleBtn = card.querySelector('[data-note-toggle]');
@@ -209,16 +227,20 @@ function buildWorkPreviewHtml(team) {
     if (items.length) {
       body += '<div class="preview-block"><p class="preview-block-title">이번주 업무</p>';
       body += items.map((it) => `
-        <div class="preview-work-row">
-          <span class="cat">${escapeHtml(it.category || '-')}</span>
-          <span>${escapeHtml(it.title || it.detail || '')}${it.title && it.detail ? ' - ' + escapeHtml(it.detail) : ''}${it.note ? ' <span class="hint">(' + escapeHtml(it.note) + ')</span>' : ''}</span>
-          <span class="due">${escapeHtml(it.dueDate || '')}</span>
+        <div class="preview-work-item">
+          <div class="preview-work-line1">
+            <span class="preview-chip">${escapeHtml(it.category || '-')}</span>
+            <span class="preview-work-title">${escapeHtml(it.title || '(제목 없음)')}</span>
+            <span class="due">${it.ongoing ? '계속' : formatDueDate(it.dueDate)}</span>
+          </div>
+          ${it.detail ? `<p class="preview-work-detail">${escapeHtml(it.detail)}</p>` : ''}
+          ${it.note ? `<p class="preview-work-detail hint">비고: ${escapeHtml(it.note)}</p>` : ''}
         </div>`).join('');
       body += '</div>';
     }
     if (vacItems.length) {
       body += '<div class="preview-block"><p class="preview-block-title">이번 주 휴가자</p>';
-      body += vacItems.map((it) => `<p class="preview-vac-line">${escapeHtml(it.name || '-')} · ${escapeHtml(it.period || '-')}</p>`).join('');
+      body += vacItems.map((it) => `<p class="preview-vac-line">${escapeHtml(it.name || '-')} (${escapeHtml(it.period || '-')})</p>`).join('');
       body += '</div>';
     }
   }
@@ -483,7 +505,7 @@ function renderPresentSlide() {
   document.getElementById('presentPageTotal').textContent = slides.length;
 
   const workHtml = s.work.length
-    ? s.work.map((w) => `<div class="present-work-row"><b>${escapeHtml(w.category || '-')}</b> · ${escapeHtml(w.dueDate || '')} · ${escapeHtml(w.title || '')} ${escapeHtml(w.detail || '')} ${w.note ? '(' + escapeHtml(w.note) + ')' : ''}</div>`).join('')
+    ? s.work.map((w) => `<div class="present-work-row"><b>${escapeHtml(w.category || '-')}</b> · ${w.ongoing ? '계속' : formatDueDate(w.dueDate)} · ${escapeHtml(w.title || '')} ${escapeHtml(w.detail || '')} ${w.note ? '(' + escapeHtml(w.note) + ')' : ''}</div>`).join('')
     : '<p class="hint">등록된 업무보고가 없습니다.</p>';
 
   const trendHtml = s.trend.length
@@ -531,7 +553,8 @@ function previewToText(team, type) {
     out += '■ 이번주 업무\n';
     if (!items.length) out += '  (등록된 업무 없음)\n';
     items.forEach((it) => {
-      out += `  - [${it.category || '-'}] ${it.title || ''} ${it.detail || ''} (예정일: ${it.dueDate || '-'}${it.note ? ', 비고: ' + it.note : ''})\n`;
+      const due = it.ongoing ? '계속' : (it.dueDate || '-');
+      out += `  - [${it.category || '-'}] ${it.title || ''} ${it.detail || ''} (예정일: ${due}${it.note ? ', 비고: ' + it.note : ''})\n`;
     });
     out += '\n■ 이번 주 휴가자\n';
     if (!vac.length) out += '  (없음)\n';
@@ -738,7 +761,7 @@ function wireWorkPanel() {
   document.getElementById('addWorkItemBtn').addEventListener('click', () => {
     const team = currentTeam();
     if (!team) return;
-    state.work[team.key].items.push({ category: '', dueDate: '', title: '', detail: '', note: '' });
+    state.work[team.key].items.push({ category: '', dueDate: '', ongoing: false, title: '', detail: '', note: '' });
     renderWorkEdit();
   });
   document.getElementById('addVacationBtn').addEventListener('click', () => {

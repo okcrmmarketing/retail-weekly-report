@@ -233,6 +233,10 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 16px 24px 60px; }
 .field-group input:focus, .field-group textarea:focus {
   outline: none; border-color: var(--accent); background: #fff;
 }
+.due-date-row { display: flex; gap: 6px; }
+.due-date-row input { flex: 1; }
+.due-date-row input:disabled { opacity: 0.5; }
+.btn.active { background: var(--accent-soft); }
 .note-toggle { font-size: 12px; color: var(--text-faint); cursor: pointer; background: none; border: none; padding: 0; margin-bottom: 8px; }
 .note-toggle:hover { color: var(--accent); }
 
@@ -265,6 +269,17 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 16px 24px 60px; }
 .preview-work-row { display: flex; gap: 8px; padding: 7px 0; border-bottom: 1px solid #F0F0F0; font-size: 13px; }
 .preview-work-row .cat { font-weight: 700; color: var(--text); min-width: 64px; }
 .preview-work-row .due { color: var(--text-faint); font-size: 12px; white-space: nowrap; }
+
+.preview-work-item { padding: 10px 0; border-bottom: 1px solid #F0F0F0; }
+.preview-work-line1 { display: flex; align-items: center; gap: 8px; }
+.preview-chip {
+  background: var(--text); color: #fff; font-size: 11px; font-weight: 700;
+  padding: 2px 8px; border-radius: 5px; white-space: nowrap;
+}
+.preview-work-title { font-weight: 700; font-size: 14px; flex: 1; }
+.preview-work-line1 .due { color: var(--text-faint); font-size: 12px; white-space: nowrap; }
+.preview-work-detail { font-size: 13px; color: var(--text-muted); margin: 4px 0 0; white-space: pre-wrap; }
+.preview-work-detail.hint { color: var(--text-faint); font-size: 12px; }
 .preview-trend-item { margin-bottom: 14px; }
 .preview-trend-item b { font-size: 14px; }
 .preview-trend-item p { font-size: 13px; color: var(--text-muted); margin: 4px 0; white-space: pre-wrap; }
