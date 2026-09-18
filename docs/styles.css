@@ -292,7 +292,7 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 0 24px 60px; }
 }
 .vac-row input:focus { outline: none; border-color: var(--accent); background: #fff; }
 
-.edit-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+.edit-actions { display: flex; gap: 8px; justify-content: flex-start; flex-wrap: wrap; }
 
 /* 미리보기 패널 */
 .preview-col { display: flex; flex-direction: column; gap: 12px; position: sticky; top: 16px; }
