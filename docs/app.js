@@ -394,12 +394,12 @@ function renderTrendEdit() {
 
   const contentInput = document.getElementById('trendContentInput');
   contentInput.innerHTML = item.content || '';
-  contentInput.oninput = () => { item.content = contentInput.innerHTML; renderTrendPreview(); };
-  contentInput.onblur = () => {
-    const clean = sanitizeRichContent(contentInput);
-    item.content = clean;
-    contentInput.innerHTML = clean;
-  };
+  // sanitizeRichContent는 DOM을 읽기만 하고 건드리지 않으므로, 타이핑 중(input)마다
+  // 바로 정제해서 item.content에 반영해도 커서 위치가 안 튄다 -- blur 시점까지 기다리면
+  // (예전 방식) 저장 버튼 클릭 타이밍에 따라 정제 전 raw HTML(줄바꿈 div, 잡다한 스타일
+  // 포함)이 그대로 저장되는 문제가 있었다(2026-09-18).
+  contentInput.oninput = () => { item.content = sanitizeRichContent(contentInput); renderTrendPreview(); };
+  contentInput.onblur = () => { contentInput.innerHTML = item.content; };
   wireRichToolbar(contentInput);
 
   renderTrendImages(item);
