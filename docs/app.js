@@ -518,41 +518,84 @@ async function loadPreviousWeekWork() {
   } catch (e) { alert('저번주 업무를 불러오지 못했습니다: ' + e.message); }
 }
 
-// ---------------- 발표 순서 ----------------
+// ---------------- 발표 순서 (업무보고: 팀 단위 / 트렌드보고: 팀원 단위) ----------------
+let activeOrderType = 'work';
+
+function defaultWorkOrder() { return state.teams.map((t) => t.key); }
+function defaultTrendOrder() {
+  const list = [];
+  state.teams.forEach((t) => (t.members || []).forEach((m) => list.push(t.key + '::' + m)));
+  return list;
+}
+function ensureOrderShape() {
+  if (!state.order || Array.isArray(state.order)) state.order = {};
+  if (!Array.isArray(state.order.work) || !state.order.work.length) state.order.work = defaultWorkOrder();
+  if (!Array.isArray(state.order.trend) || !state.order.trend.length) state.order.trend = defaultTrendOrder();
+}
+
 function renderOrderList() {
+  ensureOrderShape();
   const wrap = document.getElementById('orderList');
   wrap.innerHTML = '';
-  const order = state.order.length ? state.order : state.teams.map((t) => t.key);
-  order.forEach((teamKey, idx) => {
-    const team = state.teams.find((t) => t.key === teamKey);
-    if (!team) return;
-    const el = document.createElement('div');
-    el.className = 'order-item';
-    el.innerHTML = `
-      <span class="order-item-main">
+
+  if (activeOrderType === 'work') {
+    const order = state.order.work;
+    order.forEach((teamKey, idx) => {
+      const team = state.teams.find((t) => t.key === teamKey);
+      if (!team) return;
+      const el = document.createElement('div');
+      el.className = 'order-item';
+      el.innerHTML = `
         <span class="order-item-name">${idx + 1}. ${escapeHtml(team.label)}</span>
-        <span class="order-item-tags"><span class="order-tag">업무보고</span><span class="order-tag">트렌드보고</span></span>
-      </span>
-      <span class="order-item-btns">
-        <button class="btn btn-outline btn-xs" data-up>▲</button>
-        <button class="btn btn-outline btn-xs" data-down>▼</button>
-      </span>
-    `;
-    el.querySelector('[data-up]').addEventListener('click', () => {
-      if (idx === 0) return;
-      [order[idx - 1], order[idx]] = [order[idx], order[idx - 1]];
-      renderOrderList();
-      saveOrder();
+        <span class="order-item-btns">
+          <button class="btn btn-outline btn-xs" data-up>▲</button>
+          <button class="btn btn-outline btn-xs" data-down>▼</button>
+        </span>
+      `;
+      el.querySelector('[data-up]').addEventListener('click', () => {
+        if (idx === 0) return;
+        [order[idx - 1], order[idx]] = [order[idx], order[idx - 1]];
+        renderOrderList();
+        saveOrder();
+      });
+      el.querySelector('[data-down]').addEventListener('click', () => {
+        if (idx === order.length - 1) return;
+        [order[idx + 1], order[idx]] = [order[idx], order[idx + 1]];
+        renderOrderList();
+        saveOrder();
+      });
+      wrap.appendChild(el);
     });
-    el.querySelector('[data-down]').addEventListener('click', () => {
-      if (idx === order.length - 1) return;
-      [order[idx + 1], order[idx]] = [order[idx], order[idx + 1]];
-      renderOrderList();
-      saveOrder();
+  } else {
+    const order = state.order.trend;
+    order.forEach((key, idx) => {
+      const [teamKey, member] = key.split('::');
+      const team = state.teams.find((t) => t.key === teamKey);
+      if (!team) return;
+      const el = document.createElement('div');
+      el.className = 'order-item';
+      el.innerHTML = `
+        <span class="order-item-name">${idx + 1}. ${escapeHtml(member)} <span class="order-item-team">(${escapeHtml(team.label)})</span></span>
+        <span class="order-item-btns">
+          <button class="btn btn-outline btn-xs" data-up>▲</button>
+          <button class="btn btn-outline btn-xs" data-down>▼</button>
+        </span>
+      `;
+      el.querySelector('[data-up]').addEventListener('click', () => {
+        if (idx === 0) return;
+        [order[idx - 1], order[idx]] = [order[idx], order[idx - 1]];
+        renderOrderList();
+        saveOrder();
+      });
+      el.querySelector('[data-down]').addEventListener('click', () => {
+        if (idx === order.length - 1) return;
+        [order[idx + 1], order[idx]] = [order[idx], order[idx + 1]];
+        renderOrderList();
+        saveOrder();
+      });
+      wrap.appendChild(el);
     });
-    wrap.appendChild(el);
-  });
-  state.order = order;
+  }
 }
 
 async function saveOrder() {
@@ -600,33 +643,44 @@ function withPageRowspans(pageRows) {
 }
 
 function buildPresentSlides() {
+  ensureOrderShape();
   const slides = [];
-  state.order.forEach((teamKey) => {
+
+  state.order.work.forEach((teamKey) => {
     const team = state.teams.find((t) => t.key === teamKey);
     if (!team) return;
     const workGroups = (state.work[teamKey] || { items: [] }).items;
     const vacation = (state.vacation[teamKey] || { items: [] }).items;
-    const trendAll = (state.trend[teamKey] || { items: [] }).items;
-    const members = team.members || [];
-    const trend = (members.length ? members.map((m) => trendAll.find((it) => it.author === m)).filter(Boolean) : trendAll)
-      .filter((t) => t.title || t.content || (t.images || []).length);
 
     const flatRows = flattenWorkRows(workGroups);
-    if (flatRows.length || vacation.length) {
-      const pages = flatRows.length ? chunkArray(flatRows, MAX_WORK_ROWS_PER_PAGE) : [[]];
-      pages.forEach((pageRows, pi) => {
-        const isLastPage = pi === pages.length - 1;
-        slides.push({
-          type: 'work', team,
-          rows: withPageRowspans(pageRows),
-          vacation: isLastPage ? vacation : [],
-          showVacation: isLastPage,
-          pageLabel: pages.length > 1 ? ` (${pi + 1}/${pages.length})` : '',
-        });
+    if (!flatRows.length && !vacation.length) return;
+    const pages = flatRows.length ? chunkArray(flatRows, MAX_WORK_ROWS_PER_PAGE) : [[]];
+    pages.forEach((pageRows, pi) => {
+      const isLastPage = pi === pages.length - 1;
+      slides.push({
+        type: 'work', team,
+        rows: withPageRowspans(pageRows),
+        vacation: isLastPage ? vacation : [],
+        showVacation: isLastPage,
+        pageLabel: pages.length > 1 ? ` (${pi + 1}/${pages.length})` : '',
       });
-    }
-    if (trend.length) slides.push({ type: 'trend', team, trend });
+    });
   });
+
+  // 트렌드보고는 팀 단위가 아니라 팀원(발표자) 단위로 순서를 따로 정할 수 있어야 한다는
+  // 요청(2026-09-18)에 따라, 팀별로 묶어서 한 슬라이드에 여러 명을 보여주던 방식에서
+  // "발표자 1명 = 슬라이드 1장"으로 바꿨다 -- order.trend에 담긴 "팀key::이름" 순서 그대로.
+  state.order.trend.forEach((key) => {
+    const [teamKey, member] = key.split('::');
+    const team = state.teams.find((t) => t.key === teamKey);
+    if (!team) return;
+    const items = (state.trend[teamKey] || { items: [] }).items;
+    const entry = items.find((it) => it.author === member);
+    if (!entry) return;
+    if (!(entry.title || entry.content || (entry.images || []).length)) return;
+    slides.push({ type: 'trend', team, member, trend: [entry] });
+  });
+
   return slides;
 }
 
@@ -682,13 +736,13 @@ function renderPresentSlide() {
   } else {
     const trendHtml = s.trend.map((t) => `
         <div class="present-trend-block">
-          <b>${t.author ? escapeHtml(t.author) + ' · ' : ''}${escapeHtml(t.title || '(제목 없음)')}</b>
+          <b>${escapeHtml(t.title || '(제목 없음)')}</b>
           <p>${escapeHtml(t.content || '')}</p>
           ${(t.images || []).map((src) => `<img src="${src}" />`).join('')}
         </div>`).join('');
 
     document.getElementById('presentSlide').innerHTML = `
-      <h2>${escapeHtml(s.team.label)} 트렌드보고</h2>
+      <h2>${escapeHtml(s.team.label)} 트렌드보고 · ${escapeHtml(s.member || '')}</h2>
       <hr class="present-divider" />
       ${trendHtml}
     `;
@@ -921,11 +975,21 @@ function wirePresent() {
 
 function wireOrderModal() {
   document.getElementById('openOrderBtn').addEventListener('click', () => {
+    activeOrderType = 'work';
+    document.querySelectorAll('.order-type-btn').forEach((b) => b.classList.toggle('active', b.dataset.orderType === 'work'));
     renderOrderList();
     document.getElementById('orderModal').classList.remove('hidden');
   });
   document.getElementById('orderCloseBtn').addEventListener('click', () => {
     document.getElementById('orderModal').classList.add('hidden');
+  });
+  document.querySelectorAll('.order-type-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      activeOrderType = btn.dataset.orderType;
+      document.querySelectorAll('.order-type-btn').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderOrderList();
+    });
   });
 }
 

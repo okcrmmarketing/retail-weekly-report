@@ -354,19 +354,20 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 0 24px 60px; }
 .trend-item-toolbar { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
 
 /* 발표 순서 모달 */
-.order-list { display: flex; flex-direction: column; gap: 8px; }
+.order-type-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+.order-type-btn {
+  flex: 1; padding: 8px 10px; border: 1.5px solid var(--border); background: var(--card);
+  border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer;
+}
+.order-type-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.order-list { display: flex; flex-direction: column; gap: 8px; max-height: 50vh; overflow-y: auto; }
 .order-item {
   display: flex; align-items: center; justify-content: space-between;
   background: var(--input-bg); border-radius: 8px; padding: 10px 14px;
 }
 .order-item-btns button { margin-left: 4px; }
-.order-item-main { display: flex; flex-direction: column; gap: 4px; }
-.order-item-name { font-weight: 600; }
-.order-item-tags { display: flex; gap: 6px; }
-.order-tag {
-  font-size: 11px; color: var(--text-faint); background: var(--card);
-  border: 1px solid var(--border); border-radius: 5px; padding: 1px 7px;
-}
+.order-item-name { font-weight: 600; font-size: 14px; }
+.order-item-team { font-weight: 400; color: var(--text-faint); font-size: 12px; }
 
 /* 발표모드 */
 .present-overlay {

@@ -88,7 +88,8 @@ export default {
           trend[t.key] = await getJSON(env, `week:${week}:trend:${t.key}`, { items: [] });
           vacation[t.key] = await getJSON(env, `week:${week}:vacation:${t.key}`, { items: [] });
         }));
-        const order = await getJSON(env, `week:${week}:order`, teams.map((t) => t.key));
+        const defaultOrder = teams.map((t) => t.key);
+        const order = await getJSON(env, `week:${week}:order`, { work: defaultOrder, trend: defaultOrder });
 
         return json({ week, teams, work, trend, vacation, order });
       }
@@ -111,12 +112,14 @@ export default {
         return json({ ok: true });
       }
 
-      // ---- 발표 순서 저장 ----
+      // ---- 발표 순서 저장 (업무보고/트렌드보고 각각 독립적으로) ----
       if (path === '/api/order' && request.method === 'PUT') {
         if (!checkApiKey(request, env)) return json({ error: '인증 실패' }, 401);
         const body = await request.json();
         const { week, order } = body || {};
-        if (!week || !Array.isArray(order)) return json({ error: 'week/order 필요' }, 400);
+        if (!week || !order || !Array.isArray(order.work) || !Array.isArray(order.trend)) {
+          return json({ error: 'week/order.work/order.trend 필요' }, 400);
+        }
         await putJSON(env, `week:${week}:order`, order);
         return json({ ok: true });
       }
