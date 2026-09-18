@@ -1,0 +1,14 @@
+name = "retail-weekly-report"
+main = "worker.js"
+compatibility_date = "2026-01-01"
+
+# Cloudflare 대시보드 > Workers & Pages > KV 에서 네임스페이스를 만든 뒤
+# 그 id를 아래 <YOUR_KV_NAMESPACE_ID>에 채워 넣으세요.
+# (대시보드에서 Worker에 바인딩만 클릭으로 연결한다면 이 파일 자체는 안 써도 됩니다 - README 참고)
+[[kv_namespaces]]
+binding = "RETAIL_WEEKLY"
+id = "<YOUR_KV_NAMESPACE_ID>"
+
+# 쓰기(PUT) 요청 인증용 비밀키. 대시보드 > Worker > Settings > Variables에서
+# API_KEY 라는 이름의 "Secret" 변수로 등록하세요 (여기 평문으로 적지 말 것).
+# CLI(wrangler)를 쓴다면: wrangler secret put API_KEY
