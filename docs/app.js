@@ -803,17 +803,23 @@ function renderPresentSlide() {
       ${vacHtml}
     `;
   } else {
-    const trendHtml = s.trend.map((t) => `
-        <div class="present-trend-block">
-          <b>${escapeHtml(t.title || '(제목 없음)')}</b>
-          <p>${escapeHtml(t.content || '')}</p>
-          ${(t.images || []).map((src) => `<img src="${src}" />`).join('')}
-        </div>`).join('');
+    const t = s.trend[0] || {};
+    const layoutClass = t.layout === 'col' ? 'present-trend-col' : 'present-trend-row';
+    const imgsHtml = (t.images || []).map((src) => `<img src="${src}" />`).join('');
 
     document.getElementById('presentSlide').innerHTML = `
-      <h2>${escapeHtml(s.team.label)} 트렌드보고 · ${escapeHtml(s.member || '')}</h2>
+      <div class="present-trend-header">
+        <h2>${escapeHtml(s.team.label)} 트렌드보고</h2>
+        <span class="present-trend-meta">${escapeHtml(s.team.label)} · ${escapeHtml(s.member || '')}</span>
+      </div>
       <hr class="present-divider" />
-      ${trendHtml}
+      <div class="present-trend-scroll">
+        <p class="present-trend-title-text">${escapeHtml(t.title || '(제목 없음)')}</p>
+        <div class="present-trend-body ${layoutClass}">
+          ${imgsHtml ? `<div class="present-trend-imgs">${imgsHtml}</div>` : ''}
+          <p class="present-trend-content-text">${escapeHtml(t.content || '')}</p>
+        </div>
+      </div>
     `;
   }
 }
