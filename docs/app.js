@@ -159,7 +159,7 @@ function renderWorkEdit() {
           <label>완료예정일</label>
           <div class="due-date-row">
             <input type="date" value="${escapeAttr(item.dueDate)}" data-f="dueDate" ${item.ongoing ? 'disabled' : ''} />
-            <button class="btn btn-outline btn-xs ${item.ongoing ? 'active' : ''}" data-toggle-ongoing type="button">계속</button>
+            <button class="btn btn-toggle btn-xs ${item.ongoing ? 'active' : ''}" data-toggle-ongoing type="button">계속</button>
           </div>
         </div>
       </div>
