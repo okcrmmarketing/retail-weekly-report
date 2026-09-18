@@ -346,7 +346,7 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 0 24px 60px; }
 .preview-trend-item:last-child { border-bottom: none; }
 .preview-trend-title { font-size: 15px; font-weight: 700; margin: 0 0 2px; }
 .preview-trend-author { font-size: 12px; color: var(--text-faint); margin: 0 0 10px; }
-.preview-trend-body.preview-trend-row { display: flex; gap: 14px; align-items: flex-start; }
+.preview-trend-body.preview-trend-row { display: flex; gap: 14px; align-items: center; }
 .preview-trend-body.preview-trend-col { display: flex; flex-direction: column; gap: 10px; }
 .preview-trend-imgs { display: flex; flex-direction: column; gap: 8px; }
 .preview-trend-row .preview-trend-imgs { flex: 0 0 48%; max-width: 320px; }
@@ -450,7 +450,7 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 0 24px 60px; }
 .present-trend-scroll { flex: 1; min-height: 0; overflow-y: auto; }
 .present-trend-title-text { font-size: 18px; font-weight: 700; margin: 0 0 12px; color: var(--text); }
 .present-trend-body.present-trend-col { display: flex; flex-direction: column; gap: 14px; }
-.present-trend-body.present-trend-row { display: flex; gap: 18px; align-items: flex-start; }
+.present-trend-body.present-trend-row { display: flex; gap: 18px; align-items: center; }
 .present-trend-imgs { display: flex; flex-direction: column; gap: 8px; }
 .present-trend-col .present-trend-imgs { align-items: center; }
 .present-trend-col .present-trend-imgs img { width: auto; height: auto; max-width: 70%; max-height: 300px; border-radius: 8px; display: block; margin: 0 auto; }
