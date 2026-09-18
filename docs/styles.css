@@ -349,11 +349,11 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 0 24px 60px; }
 .preview-trend-body.preview-trend-row { display: flex; gap: 14px; align-items: flex-start; }
 .preview-trend-body.preview-trend-col { display: flex; flex-direction: column; gap: 10px; }
 .preview-trend-imgs { display: flex; flex-direction: column; gap: 8px; }
-.preview-trend-row .preview-trend-imgs { flex: 0 0 40%; max-width: 220px; }
+.preview-trend-row .preview-trend-imgs { flex: 0 0 48%; max-width: 320px; }
 .preview-trend-col .preview-trend-imgs { flex-direction: row; flex-wrap: wrap; justify-content: center; }
 .preview-trend-imgs img { border-radius: 8px; border: 1px solid var(--border); display: block; }
 .preview-trend-row .preview-trend-imgs img { width: 100%; }
-.preview-trend-col .preview-trend-imgs img { width: 140px; }
+.preview-trend-col .preview-trend-imgs img { width: 260px; max-width: 100%; }
 .preview-trend-content { font-size: 13px; color: var(--text-muted); margin: 0; white-space: pre-wrap; flex: 1; }
 .preview-vac-line { font-size: 13px; color: var(--text-muted); }
 .preview-actions { display: flex; gap: 8px; flex-wrap: wrap; }
