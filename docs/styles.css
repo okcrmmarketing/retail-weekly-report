@@ -399,7 +399,7 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 0 24px 60px; }
 .present-work-chipcol { flex: 0 0 62px; padding-top: 1px; }
 .present-work-main { flex: 1; min-width: 0; }
 .present-work-title { font-weight: 700; font-size: 14px; }
-.present-work-detail { font-size: 12px; color: var(--text-faint); margin: 4px 0 0; }
+.present-work-detail { font-size: 12px; color: var(--text-faint); margin: 4px 0 0; white-space: pre-wrap; }
 .present-empty-note { color: var(--text-faint); font-size: 13px; padding: 10px 0; }
 
 .present-vac-line { margin-top: 16px; font-size: 13px; }
@@ -407,6 +407,7 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 0 24px 60px; }
 .present-vac-line .val { color: var(--text-muted); }
 
 .present-trend-block { margin-bottom: 16px; }
+.present-trend-block p { white-space: pre-wrap; }
 .present-trend-block img { max-width: 200px; border-radius: 8px; margin: 6px 6px 0 0; }
 
 .present-bottom-nav {
