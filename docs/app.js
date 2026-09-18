@@ -48,6 +48,8 @@ let state = {
   trend: {},
   vacation: {},
   order: [],
+  activeTeamKey: null,
+  activeType: 'work',
 };
 let adminSessionPassword = null; // 로그인 성공 시 세션 동안만 메모리 보관 (재입력 방지용)
 
@@ -67,9 +69,16 @@ async function apiWrite(path, method, body) {
   if (!res.ok || data.error) throw new Error(data.error || ('서버 오류 (' + res.status + ')'));
   return data;
 }
+function stripUiState(items) {
+  return (items || []).map((it) => {
+    const copy = Object.assign({}, it);
+    delete copy.__noteOpen;
+    return copy;
+  });
+}
 
 async function loadWeek() {
-  document.getElementById('weekLabel').textContent = weekLabel(state.week);
+  document.getElementById('weekLabel').textContent = weekLabel(state.week).split(' ')[0];
   try {
     const data = await apiGet('/api/bootstrap?week=' + encodeURIComponent(state.week));
     state.teams = data.teams;
@@ -81,144 +90,189 @@ async function loadWeek() {
     alert('데이터를 불러오지 못했습니다: ' + e.message + '\n(config.js의 WORKER_BASE_URL 설정을 확인하세요)');
     return;
   }
-  renderWork();
-  renderTrend();
-  renderVacation();
+  if (!state.activeTeamKey || !state.teams.find((t) => t.key === state.activeTeamKey)) {
+    state.activeTeamKey = state.teams[0] ? state.teams[0].key : null;
+  }
+  renderTeamTabs();
+  renderWorkEdit();
+  renderWorkPreview();
+  renderTrendEdit();
+  renderTrendPreview();
   renderOrderList();
 }
 
-// ---------------- 업무보고 ----------------
-function renderWork() {
-  const container = document.getElementById('workTeamsContainer');
-  container.innerHTML = '';
-  state.teams.forEach((team) => {
-    const data = state.work[team.key] || { items: [] };
-    const card = document.createElement('div');
-    card.className = 'team-card';
-    card.innerHTML = `
-      <div class="team-card-header">
-        <span class="team-card-title">${escapeHtml(team.label)}</span>
-        <button class="btn btn-primary btn-sm" data-save-work="${team.key}">저장</button>
-      </div>
-      <div class="row-head">
-        <span>카테고리</span><span>예정일</span><span>상세내용</span><span class="head-note">비고</span><span></span>
-      </div>
-      <div class="work-rows" data-rows-for="${team.key}"></div>
-      <button class="btn btn-secondary btn-sm add-row-btn" data-add-work="${team.key}">+ 항목 추가</button>
-    `;
-    container.appendChild(card);
-    renderWorkRows(team.key, data.items);
-  });
-
-  container.querySelectorAll('[data-add-work]').forEach((btn) => {
+// ---------------- 팀 탭 ----------------
+function renderTeamTabs() {
+  const wrap = document.getElementById('teamTabs');
+  wrap.innerHTML = '';
+  state.teams.forEach((team, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'team-tab-btn' + (team.key === state.activeTeamKey ? ' active' : '');
+    btn.innerHTML = `<span class="team-tab-num">${String(idx + 1).padStart(2, '0')}</span>${escapeHtml(team.label)}`;
     btn.addEventListener('click', () => {
-      const key = btn.dataset.addWork;
-      state.work[key] = state.work[key] || { items: [] };
-      state.work[key].items.push({ category: '', dueDate: '', detail: '', note: '' });
-      renderWorkRows(key, state.work[key].items);
+      state.activeTeamKey = team.key;
+      renderTeamTabs();
+      renderWorkEdit();
+      renderWorkPreview();
+      renderTrendEdit();
+      renderTrendPreview();
     });
-  });
-  container.querySelectorAll('[data-save-work]').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const key = btn.dataset.saveWork;
-      btn.disabled = true;
-      try {
-        await apiWrite('/api/save', 'PUT', { week: state.week, section: 'work', team: key, data: state.work[key] });
-        flashSaved(btn);
-      } catch (e) { alert('저장 실패: ' + e.message); }
-      btn.disabled = false;
-    });
+    wrap.appendChild(btn);
   });
 }
 
-function renderWorkRows(teamKey, items) {
-  const wrap = document.querySelector(`[data-rows-for="${teamKey}"]`);
-  wrap.innerHTML = '';
+function currentTeam() {
+  return state.teams.find((t) => t.key === state.activeTeamKey) || null;
+}
+
+// ---------------- 업무보고(편집) ----------------
+function renderWorkEdit() {
+  const team = currentTeam();
+  const itemsWrap = document.getElementById('workItemsWrap');
+  const vacWrap = document.getElementById('vacationRowsWrap');
+  itemsWrap.innerHTML = '';
+  vacWrap.innerHTML = '';
+  if (!team) return;
+
+  const items = (state.work[team.key] || (state.work[team.key] = { items: [] })).items;
   items.forEach((item, idx) => {
-    const row = document.createElement('div');
-    row.className = 'work-row';
-    row.innerHTML = `
-      <input value="${escapeAttr(item.category)}" placeholder="카테고리" data-f="category" />
-      <input type="date" value="${escapeAttr(item.dueDate)}" data-f="dueDate" />
-      <textarea rows="1" placeholder="상세내용" data-f="detail">${escapeHtml(item.detail)}</textarea>
-      <input class="work-note" value="${escapeAttr(item.note)}" placeholder="비고" data-f="note" />
-      <button class="btn-danger" data-del="${idx}">✕</button>
+    const card = document.createElement('div');
+    card.className = 'item-card';
+    const noteOpen = item.__noteOpen || !!item.note;
+    card.innerHTML = `
+      <div class="item-card-top">
+        <span class="item-drag-handle">⠿</span>
+        <button class="btn-danger-icon" data-del title="삭제">✕</button>
+      </div>
+      <div class="field-row">
+        <div class="field-group"><label>카테고리</label><input placeholder="카테고리 작성" value="${escapeAttr(item.category)}" data-f="category" /></div>
+        <div class="field-group"><label>완료예정일</label><input type="date" value="${escapeAttr(item.dueDate)}" data-f="dueDate" /></div>
+      </div>
+      <div class="field-row">
+        <div class="field-group full"><label>업무 제목</label><input placeholder="업무 제목 작성" value="${escapeAttr(item.title)}" data-f="title" /></div>
+      </div>
+      <div class="field-row">
+        <div class="field-group full"><label>상세내용</label><textarea rows="2" placeholder="업무 상세내용 작성" data-f="detail">${escapeHtml(item.detail)}</textarea></div>
+      </div>
+      <div class="field-row ${noteOpen ? '' : 'hidden'}" data-note-row>
+        <div class="field-group full"><label>비고</label><input placeholder="비고" value="${escapeAttr(item.note)}" data-f="note" /></div>
+      </div>
+      <button class="note-toggle ${noteOpen ? 'hidden' : ''}" data-note-toggle>⌄ 비고 추가</button>
     `;
-    row.querySelectorAll('[data-f]').forEach((el) => {
+    card.querySelectorAll('[data-f]').forEach((el) => {
       el.addEventListener('input', () => { items[idx][el.dataset.f] = el.value; });
     });
-    row.querySelector('[data-del]').addEventListener('click', () => {
+    card.querySelector('[data-del]').addEventListener('click', () => {
       items.splice(idx, 1);
-      renderWorkRows(teamKey, items);
+      renderWorkEdit();
     });
-    wrap.appendChild(row);
+    const toggleBtn = card.querySelector('[data-note-toggle]');
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', () => {
+        item.__noteOpen = true;
+        card.querySelector('[data-note-row]').classList.remove('hidden');
+        toggleBtn.classList.add('hidden');
+      });
+    }
+    itemsWrap.appendChild(card);
   });
-}
 
-// ---------------- 트렌드보고 ----------------
-function renderTrend() {
-  const container = document.getElementById('trendTeamsContainer');
-  container.innerHTML = '';
-  state.teams.forEach((team) => {
-    const data = state.trend[team.key] || { items: [] };
-    const card = document.createElement('div');
-    card.className = 'team-card';
-    card.innerHTML = `
-      <div class="team-card-header">
-        <span class="team-card-title">${escapeHtml(team.label)}</span>
-        <button class="btn btn-primary btn-sm" data-save-trend="${team.key}">저장</button>
-      </div>
-      <div class="trend-items" data-trend-for="${team.key}"></div>
-      <button class="btn btn-secondary btn-sm add-row-btn" data-add-trend="${team.key}">+ 트렌드 추가</button>
+  const vacItems = (state.vacation[team.key] || (state.vacation[team.key] = { items: [] })).items;
+  vacItems.forEach((item, idx) => {
+    const row = document.createElement('div');
+    row.className = 'vac-row';
+    row.innerHTML = `
+      <input value="${escapeAttr(item.name)}" placeholder="이름" data-f="name" />
+      <input value="${escapeAttr(item.period)}" placeholder="예: 8/25(월)~8/27(수)" data-f="period" />
+      <button class="btn-danger-icon" data-del title="삭제">✕</button>
     `;
-    container.appendChild(card);
-    renderTrendItems(team.key, data.items);
-  });
-
-  container.querySelectorAll('[data-add-trend]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const key = btn.dataset.addTrend;
-      state.trend[key] = state.trend[key] || { items: [] };
-      state.trend[key].items.push({ title: '', content: '', images: [] });
-      renderTrendItems(key, state.trend[key].items);
+    row.querySelectorAll('[data-f]').forEach((el) => {
+      el.addEventListener('input', () => { vacItems[idx][el.dataset.f] = el.value; });
     });
-  });
-  container.querySelectorAll('[data-save-trend]').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const key = btn.dataset.saveTrend;
-      btn.disabled = true;
-      try {
-        await apiWrite('/api/save', 'PUT', { week: state.week, section: 'trend', team: key, data: state.trend[key] });
-        flashSaved(btn);
-      } catch (e) { alert('저장 실패: ' + e.message + (e.message.includes('413') ? ' (이미지 용량이 너무 큽니다)' : '')); }
-      btn.disabled = false;
+    row.querySelector('[data-del]').addEventListener('click', () => {
+      vacItems.splice(idx, 1);
+      renderWorkEdit();
     });
+    vacWrap.appendChild(row);
   });
 }
 
-function renderTrendItems(teamKey, items) {
-  const wrap = document.querySelector(`[data-trend-for="${teamKey}"]`);
+function buildWorkPreviewHtml(team) {
+  const items = (state.work[team.key] || { items: [] }).items;
+  const vacItems = (state.vacation[team.key] || { items: [] }).items;
+  const hasAny = items.length > 0 || vacItems.length > 0;
+
+  let body = '';
+  if (!hasAny) {
+    body = '<p class="preview-empty">작성된 내용이 없습니다.</p>';
+  } else {
+    if (items.length) {
+      body += '<div class="preview-block"><p class="preview-block-title">이번주 업무</p>';
+      body += items.map((it) => `
+        <div class="preview-work-row">
+          <span class="cat">${escapeHtml(it.category || '-')}</span>
+          <span>${escapeHtml(it.title || it.detail || '')}${it.title && it.detail ? ' - ' + escapeHtml(it.detail) : ''}${it.note ? ' <span class="hint">(' + escapeHtml(it.note) + ')</span>' : ''}</span>
+          <span class="due">${escapeHtml(it.dueDate || '')}</span>
+        </div>`).join('');
+      body += '</div>';
+    }
+    if (vacItems.length) {
+      body += '<div class="preview-block"><p class="preview-block-title">이번 주 휴가자</p>';
+      body += vacItems.map((it) => `<p class="preview-vac-line">${escapeHtml(it.name || '-')} · ${escapeHtml(it.period || '-')}</p>`).join('');
+      body += '</div>';
+    }
+  }
+
+  return `
+    <h2 class="preview-title">${escapeHtml(team.label)} 주간업무 보고</h2>
+    <p class="preview-subtitle">${escapeHtml(weekLabel(state.week))}</p>
+    <hr class="preview-divider" />
+    ${body}
+  `;
+}
+
+function renderWorkPreview() {
+  const team = currentTeam();
+  const el = document.getElementById('workPreview');
+  if (!team) { el.innerHTML = ''; return; }
+  el.innerHTML = buildWorkPreviewHtml(team);
+}
+
+// ---------------- 트렌드보고(편집) ----------------
+function renderTrendEdit() {
+  const team = currentTeam();
+  const wrap = document.getElementById('trendItemsWrap');
   wrap.innerHTML = '';
+  if (!team) return;
+  const items = (state.trend[team.key] || (state.trend[team.key] = { items: [] })).items;
+
   items.forEach((item, idx) => {
-    const el = document.createElement('div');
-    el.className = 'trend-item';
-    el.innerHTML = `
-      <input class="trend-title" value="${escapeAttr(item.title)}" placeholder="제목" data-f="title" />
-      <textarea class="trend-content" placeholder="내용" data-f="content">${escapeHtml(item.content)}</textarea>
+    const card = document.createElement('div');
+    card.className = 'item-card';
+    card.innerHTML = `
+      <div class="item-card-top">
+        <span class="item-drag-handle">⠿</span>
+        <button class="btn-danger-icon" data-del title="삭제">✕</button>
+      </div>
+      <div class="field-row">
+        <div class="field-group full"><label>제목</label><input placeholder="트렌드 제목" value="${escapeAttr(item.title)}" data-f="title" /></div>
+      </div>
+      <div class="field-row">
+        <div class="field-group full"><label>내용</label><textarea rows="3" placeholder="트렌드 내용" data-f="content">${escapeHtml(item.content)}</textarea></div>
+      </div>
       <div class="trend-images" data-imgs></div>
       <div class="trend-item-toolbar">
-        <label class="btn btn-secondary btn-sm">이미지 첨부<input type="file" accept="image/*" multiple hidden data-imgadd /></label>
-        <button class="btn-danger" data-deltrend>이 트렌드 삭제</button>
+        <label class="btn btn-outline btn-xs">이미지 첨부<input type="file" accept="image/*" multiple hidden data-imgadd /></label>
       </div>
     `;
-    el.querySelectorAll('[data-f]').forEach((inp) => {
+    card.querySelectorAll('[data-f]').forEach((inp) => {
       inp.addEventListener('input', () => { item[inp.dataset.f] = inp.value; });
     });
-    el.querySelector('[data-deltrend]').addEventListener('click', () => {
+    card.querySelector('[data-del]').addEventListener('click', () => {
       items.splice(idx, 1);
-      renderTrendItems(teamKey, items);
+      renderTrendEdit();
     });
-    el.querySelector('[data-imgadd]').addEventListener('change', async (e) => {
+    card.querySelector('[data-imgadd]').addEventListener('change', async (e) => {
       const files = Array.from(e.target.files || []);
       for (const f of files) {
         try {
@@ -227,11 +281,11 @@ function renderTrendItems(teamKey, items) {
           item.images.push(dataUrl);
         } catch (err) { alert('이미지 처리 실패: ' + err.message); }
       }
-      renderTrendImages(el.querySelector('[data-imgs]'), item);
+      renderTrendImages(card.querySelector('[data-imgs]'), item);
       e.target.value = '';
     });
-    renderTrendImages(el.querySelector('[data-imgs]'), item);
-    wrap.appendChild(el);
+    renderTrendImages(card.querySelector('[data-imgs]'), item);
+    wrap.appendChild(card);
   });
 }
 
@@ -271,72 +325,76 @@ function compressImage(file, maxWidth = 1200, quality = 0.72) {
   });
 }
 
-// ---------------- 휴가자현황 ----------------
-function renderVacation() {
-  const container = document.getElementById('vacationTeamsContainer');
-  container.innerHTML = '';
-  state.teams.forEach((team) => {
-    const data = state.vacation[team.key] || { items: [] };
-    const card = document.createElement('div');
-    card.className = 'team-card';
-    card.innerHTML = `
-      <div class="team-card-header">
-        <span class="team-card-title">${escapeHtml(team.label)}</span>
-        <button class="btn btn-primary btn-sm" data-save-vac="${team.key}">저장</button>
-      </div>
-      <div class="vac-rows" data-vacrows-for="${team.key}"></div>
-      <button class="btn btn-secondary btn-sm add-row-btn" data-add-vac="${team.key}">+ 휴가자 추가</button>
-    `;
-    container.appendChild(card);
-    renderVacRows(team.key, data.items);
-  });
-
-  container.querySelectorAll('[data-add-vac]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const key = btn.dataset.addVac;
-      state.vacation[key] = state.vacation[key] || { items: [] };
-      state.vacation[key].items.push({ name: '', date: '', type: '연차', note: '' });
-      renderVacRows(key, state.vacation[key].items);
-    });
-  });
-  container.querySelectorAll('[data-save-vac]').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const key = btn.dataset.saveVac;
-      btn.disabled = true;
-      try {
-        await apiWrite('/api/save', 'PUT', { week: state.week, section: 'vacation', team: key, data: state.vacation[key] });
-        flashSaved(btn);
-      } catch (e) { alert('저장 실패: ' + e.message); }
-      btn.disabled = false;
-    });
-  });
+function buildTrendPreviewHtml(team) {
+  const items = (state.trend[team.key] || { items: [] }).items;
+  let body = '<p class="preview-empty">작성된 내용이 없습니다.</p>';
+  if (items.length) {
+    body = items.map((t) => `
+      <div class="preview-trend-item">
+        <b>${escapeHtml(t.title || '(제목 없음)')}</b>
+        <p>${escapeHtml(t.content || '')}</p>
+        ${(t.images || []).map((src) => `<img src="${src}" />`).join('')}
+      </div>`).join('');
+  }
+  return `
+    <h2 class="preview-title">${escapeHtml(team.label)} 트렌드보고</h2>
+    <p class="preview-subtitle">${escapeHtml(weekLabel(state.week))}</p>
+    <hr class="preview-divider" />
+    ${body}
+  `;
 }
 
-function renderVacRows(teamKey, items) {
-  const wrap = document.querySelector(`[data-vacrows-for="${teamKey}"]`);
-  wrap.innerHTML = '';
-  items.forEach((item, idx) => {
-    const row = document.createElement('div');
-    row.className = 'vac-row';
-    row.innerHTML = `
-      <input value="${escapeAttr(item.name)}" placeholder="이름" data-f="name" />
-      <input type="date" value="${escapeAttr(item.date)}" data-f="date" />
-      <input value="${escapeAttr(item.type)}" placeholder="연차/반차" data-f="type" />
-      <input class="vac-note" value="${escapeAttr(item.note)}" placeholder="비고" data-f="note" />
-      <button class="btn-danger" data-del="${idx}">✕</button>
-    `;
-    row.querySelectorAll('[data-f]').forEach((el) => {
-      el.addEventListener('input', () => { items[idx][el.dataset.f] = el.value; });
-    });
-    row.querySelector('[data-del]').addEventListener('click', () => {
-      items.splice(idx, 1);
-      renderVacRows(teamKey, items);
-    });
-    wrap.appendChild(row);
-  });
+function renderTrendPreview() {
+  const team = currentTeam();
+  const el = document.getElementById('trendPreview');
+  if (!team) { el.innerHTML = ''; return; }
+  el.innerHTML = buildTrendPreviewHtml(team);
 }
 
-// ---------------- 발표모드 ----------------
+// ---------------- 저장 / 새로고침 ----------------
+async function saveCurrentWork() {
+  const team = currentTeam();
+  if (!team) return;
+  const btn = document.getElementById('saveWorkBtn');
+  btn.disabled = true;
+  try {
+    const workData = { items: stripUiState(state.work[team.key].items) };
+    await apiWrite('/api/save', 'PUT', { week: state.week, section: 'work', team: team.key, data: workData });
+    await apiWrite('/api/save', 'PUT', { week: state.week, section: 'vacation', team: team.key, data: state.vacation[team.key] });
+    flashSaved(btn);
+    renderWorkPreview();
+  } catch (e) { alert('저장 실패: ' + e.message); }
+  btn.disabled = false;
+}
+
+async function saveCurrentTrend() {
+  const team = currentTeam();
+  if (!team) return;
+  const btn = document.getElementById('saveTrendBtn');
+  btn.disabled = true;
+  try {
+    await apiWrite('/api/save', 'PUT', { week: state.week, section: 'trend', team: team.key, data: state.trend[team.key] });
+    flashSaved(btn);
+    renderTrendPreview();
+  } catch (e) { alert('저장 실패: ' + e.message + (e.message.includes('413') ? ' (이미지 용량이 너무 큽니다)' : '')); }
+  btn.disabled = false;
+}
+
+async function loadPreviousWeekWork() {
+  const team = currentTeam();
+  if (!team) return;
+  const prevWeek = addWeeks(state.week, -1);
+  try {
+    const data = await apiGet('/api/bootstrap?week=' + encodeURIComponent(prevWeek));
+    const prevItems = (data.work[team.key] || { items: [] }).items;
+    if (!prevItems.length) { alert('저번주에 등록된 업무가 없습니다.'); return; }
+    if (state.work[team.key].items.length && !confirm('현재 작성 중인 업무 항목을 저번주 업무로 덮어씁니다. 계속할까요?')) return;
+    state.work[team.key].items = JSON.parse(JSON.stringify(prevItems));
+    renderWorkEdit();
+  } catch (e) { alert('저번주 업무를 불러오지 못했습니다: ' + e.message); }
+}
+
+// ---------------- 발표 순서 ----------------
 function renderOrderList() {
   const wrap = document.getElementById('orderList');
   wrap.innerHTML = '';
@@ -349,8 +407,8 @@ function renderOrderList() {
     el.innerHTML = `
       <span>${idx + 1}. ${escapeHtml(team.label)}</span>
       <span class="order-item-btns">
-        <button class="btn btn-secondary btn-sm" data-up>▲</button>
-        <button class="btn btn-secondary btn-sm" data-down>▼</button>
+        <button class="btn btn-outline btn-xs" data-up>▲</button>
+        <button class="btn btn-outline btn-xs" data-down>▼</button>
       </span>
     `;
     el.querySelector('[data-up]').addEventListener('click', () => {
@@ -376,13 +434,15 @@ async function saveOrder() {
   } catch (e) { alert('발표순서 저장 실패: ' + e.message); }
 }
 
+// ---------------- 발표모드 ----------------
 let presentIdx = 0;
 function buildPresentSlides() {
   return state.order.map((teamKey) => {
     const team = state.teams.find((t) => t.key === teamKey);
     const work = (state.work[teamKey] || { items: [] }).items;
     const trend = (state.trend[teamKey] || { items: [] }).items;
-    return { team, work, trend };
+    const vacation = (state.vacation[teamKey] || { items: [] }).items;
+    return { team, work, trend, vacation };
   }).filter((s) => s.team);
 }
 
@@ -395,7 +455,7 @@ function renderPresentSlide() {
   document.getElementById('presentPageTotal').textContent = slides.length;
 
   const workHtml = s.work.length
-    ? s.work.map((w) => `<div class="present-work-row"><b>${escapeHtml(w.category || '-')}</b> · ${escapeHtml(w.dueDate || '')} · ${escapeHtml(w.detail || '')} ${w.note ? '(' + escapeHtml(w.note) + ')' : ''}</div>`).join('')
+    ? s.work.map((w) => `<div class="present-work-row"><b>${escapeHtml(w.category || '-')}</b> · ${escapeHtml(w.dueDate || '')} · ${escapeHtml(w.title || '')} ${escapeHtml(w.detail || '')} ${w.note ? '(' + escapeHtml(w.note) + ')' : ''}</div>`).join('')
     : '<p class="hint">등록된 업무보고가 없습니다.</p>';
 
   const trendHtml = s.trend.length
@@ -407,10 +467,16 @@ function renderPresentSlide() {
         </div>`).join('')
     : '<p class="hint">등록된 트렌드보고가 없습니다.</p>';
 
+  const vacHtml = s.vacation.length
+    ? s.vacation.map((v) => `<div class="present-work-row">${escapeHtml(v.name || '-')} · ${escapeHtml(v.period || '-')}</div>`).join('')
+    : '<p class="hint">이번 주 휴가자가 없습니다.</p>';
+
   document.getElementById('presentSlide').innerHTML = `
     <h2>${escapeHtml(s.team.label)}</h2>
     <h3>업무보고</h3>
     ${workHtml}
+    <h3>휴가자현황</h3>
+    ${vacHtml}
     <h3>트렌드보고</h3>
     ${trendHtml}
   `;
@@ -428,26 +494,74 @@ function exitPresent() {
   if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
 }
 
-// ---------------- 인쇄 / 다운로드 ----------------
-function downloadWeekAsText() {
-  let out = `리테일기획부 주간업무 - ${weekLabel(state.week)}\n\n`;
-  state.teams.forEach((team) => {
-    out += `■ ${team.label}\n`;
+// ---------------- 복사 / 다운로드 / 인쇄 ----------------
+function previewToText(team, type) {
+  if (type === 'work') {
     const items = (state.work[team.key] || { items: [] }).items;
-    if (items.length === 0) out += '  (등록된 업무 없음)\n';
+    const vac = (state.vacation[team.key] || { items: [] }).items;
+    let out = `${team.label} 주간업무 보고 - ${weekLabel(state.week)}\n\n`;
+    out += '■ 이번주 업무\n';
+    if (!items.length) out += '  (등록된 업무 없음)\n';
     items.forEach((it) => {
-      out += `  - [${it.category || '-'}] ${it.detail || ''} (예정일: ${it.dueDate || '-'}${it.note ? ', 비고: ' + it.note : ''})\n`;
+      out += `  - [${it.category || '-'}] ${it.title || ''} ${it.detail || ''} (예정일: ${it.dueDate || '-'}${it.note ? ', 비고: ' + it.note : ''})\n`;
     });
-    out += '\n';
-  });
-  const blob = new Blob([out], { type: 'text/plain;charset=utf-8' });
+    out += '\n■ 이번 주 휴가자\n';
+    if (!vac.length) out += '  (없음)\n';
+    vac.forEach((v) => { out += `  - ${v.name || '-'} (${v.period || '-'})\n`; });
+    return out;
+  }
+  const items = (state.trend[team.key] || { items: [] }).items;
+  let out = `${team.label} 트렌드보고 - ${weekLabel(state.week)}\n\n`;
+  if (!items.length) out += '(등록된 트렌드 없음)\n';
+  items.forEach((t) => { out += `■ ${t.title || '(제목 없음)'}\n${t.content || ''}\n\n`; });
+  return out;
+}
+
+function downloadText(filename, text) {
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `주간업무_${state.week}.txt`;
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   a.remove();
 }
+
+async function copyPreview(type) {
+  const team = currentTeam();
+  if (!team) return;
+  try {
+    await navigator.clipboard.writeText(previewToText(team, type));
+    alert('복사되었습니다.');
+  } catch (e) { alert('복사 실패: ' + e.message); }
+}
+
+function downloadPreview(type) {
+  const team = currentTeam();
+  if (!team) return;
+  const label = type === 'work' ? '업무보고' : '트렌드보고';
+  downloadText(`${team.label}_${label}_${state.week}.txt`, previewToText(team, type));
+}
+
+function printPreview(type) {
+  window.print();
+}
+
+function printAllPreview(type) {
+  const area = document.getElementById('printAllArea');
+  area.innerHTML = state.teams.map((team) => `<div class="preview-card">${type === 'work' ? buildWorkPreviewHtml(team) : buildTrendPreviewHtml(team)}</div>`).join('');
+  area.classList.add('active');
+  window.print();
+  setTimeout(() => { area.classList.remove('active'); area.innerHTML = ''; }, 500);
+}
+
+async function downloadAllTeams() {
+  for (const team of state.teams) {
+    downloadText(`${team.label}_${previewFileTag()}_${state.week}.txt`, previewToText(team, state.activeType));
+    await new Promise((r) => setTimeout(r, 350));
+  }
+}
+function previewFileTag() { return state.activeType === 'work' ? '업무보고' : '트렌드보고'; }
 
 // ---------------- 관리자 ----------------
 function renderAdminTeamList() {
@@ -459,7 +573,7 @@ function renderAdminTeamList() {
     row.innerHTML = `
       <input value="${escapeAttr(team.key)}" placeholder="key(영문)" data-f="key" style="flex:1" />
       <input value="${escapeAttr(team.label)}" placeholder="팀 이름" data-f="label" style="flex:2" />
-      <button class="btn-danger" data-del>✕</button>
+      <button class="btn-danger-icon" data-del>✕</button>
     `;
     row.querySelectorAll('[data-f]').forEach((el) => {
       el.addEventListener('input', () => { team[el.dataset.f] = el.value; });
@@ -488,7 +602,6 @@ function wireAdmin() {
     const errEl = document.getElementById('adminLoginError');
     errEl.classList.add('hidden');
     try {
-      // /api/admin/login은 공개 엔드포인트(비밀번호 자체가 인증 수단)라 X-Api-Key 없이 호출
       const r = await fetch(API + '/api/admin/login', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw }),
       });
@@ -542,13 +655,14 @@ function flashSaved(btn) {
 }
 
 // ---------------- 초기화 ----------------
-function wireTabs() {
-  document.querySelectorAll('.tab-btn').forEach((btn) => {
+function wireTypeTabs() {
+  document.querySelectorAll('.type-tab-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
+      document.querySelectorAll('.type-tab-btn').forEach((b) => b.classList.remove('active'));
       document.querySelectorAll('.tab-panel').forEach((p) => p.classList.remove('active'));
       btn.classList.add('active');
       document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+      state.activeType = btn.dataset.tab;
     });
   });
 }
@@ -575,19 +689,72 @@ function wirePresent() {
   });
 }
 
-function wirePrintDownload() {
-  document.getElementById('printWorkBtn').addEventListener('click', () => window.print());
-  document.getElementById('downloadWorkBtn').addEventListener('click', downloadWeekAsText);
+function wireOrderModal() {
+  document.getElementById('openOrderBtn').addEventListener('click', () => {
+    renderOrderList();
+    document.getElementById('orderModal').classList.remove('hidden');
+  });
+  document.getElementById('orderCloseBtn').addEventListener('click', () => {
+    document.getElementById('orderModal').classList.add('hidden');
+  });
+}
+
+function wireWorkPanel() {
+  document.getElementById('addWorkItemBtn').addEventListener('click', () => {
+    const team = currentTeam();
+    if (!team) return;
+    state.work[team.key].items.push({ category: '', dueDate: '', title: '', detail: '', note: '' });
+    renderWorkEdit();
+  });
+  document.getElementById('addVacationBtn').addEventListener('click', () => {
+    const team = currentTeam();
+    if (!team) return;
+    state.vacation[team.key].items.push({ name: '', period: '' });
+    renderWorkEdit();
+  });
+  document.getElementById('loadPrevWorkBtn').addEventListener('click', loadPreviousWeekWork);
+  document.getElementById('saveWorkBtn').addEventListener('click', saveCurrentWork);
+  document.getElementById('resetTeamBtn').addEventListener('click', () => { if (confirm('저장하지 않은 변경사항을 취소하고 서버 데이터로 되돌립니다. 계속할까요?')) loadWeek(); });
+  document.getElementById('refreshBtn').addEventListener('click', loadWeek);
+
+  document.getElementById('copyWorkBtn').addEventListener('click', () => copyPreview('work'));
+  document.getElementById('downloadWorkBtn').addEventListener('click', () => downloadPreview('work'));
+  document.getElementById('printWorkBtn').addEventListener('click', () => printPreview('work'));
+  document.getElementById('printAllWorkBtn').addEventListener('click', () => printAllPreview('work'));
+}
+
+function wireTrendPanel() {
+  document.getElementById('addTrendItemBtn').addEventListener('click', () => {
+    const team = currentTeam();
+    if (!team) return;
+    state.trend[team.key].items.push({ title: '', content: '', images: [] });
+    renderTrendEdit();
+  });
+  document.getElementById('saveTrendBtn').addEventListener('click', saveCurrentTrend);
+  document.getElementById('resetTrendBtn').addEventListener('click', () => { if (confirm('저장하지 않은 변경사항을 취소하고 서버 데이터로 되돌립니다. 계속할까요?')) loadWeek(); });
+  document.getElementById('refreshTrendBtn').addEventListener('click', loadWeek);
+
+  document.getElementById('copyTrendBtn').addEventListener('click', () => copyPreview('trend'));
+  document.getElementById('downloadTrendBtn').addEventListener('click', () => downloadPreview('trend'));
+  document.getElementById('printTrendBtn').addEventListener('click', () => printPreview('trend'));
+  document.getElementById('printAllTrendBtn').addEventListener('click', () => printAllPreview('trend'));
+}
+
+function wireGlobalToolbar() {
+  document.getElementById('downloadAllBtn').addEventListener('click', downloadAllTeams);
 }
 
 (function init() {
   if (!CFG.WORKER_BASE_URL || CFG.WORKER_BASE_URL.startsWith('여기에')) {
     alert('config.js에 Cloudflare Worker 주소/API_KEY를 먼저 설정해주세요.');
   }
-  wireTabs();
+  wireTypeTabs();
   wireWeekNav();
   wirePresent();
-  wirePrintDownload();
+  wireOrderModal();
+  wireWorkPanel();
+  wireTrendPanel();
+  wireGlobalToolbar();
   wireAdmin();
   loadWeek();
 })();
