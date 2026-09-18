@@ -249,26 +249,25 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 0 24px 60px; }
 .item-card.dragging { opacity: 0.4; }
 .item-card.drag-over { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
 
-.task-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
-.task-block { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px; background: var(--input-bg); }
-.task-block .field-row { margin-bottom: 6px; }
+.task-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
+.task-block { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px; background: #fff; }
+.task-block .field-row { margin-bottom: 4px; }
 .task-block .field-row:last-child { margin-bottom: 0; }
-.task-block-top { margin-bottom: 6px !important; }
-.task-block-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.task-block-label { font-size: 12px; font-weight: 700; color: var(--text-faint); }
+.task-block-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px !important; }
+.task-block-label { font-size: 11px; font-weight: 700; color: var(--text-faint); }
 .task-title-row { grid-template-columns: 1.6fr 1fr; }
 
-.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
-.field-group { display: flex; flex-direction: column; gap: 4px; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+.field-group { display: flex; flex-direction: column; gap: 3px; }
 .field-group.full { grid-column: 1 / -1; }
-.field-group label { font-size: 11px; color: var(--text-faint); font-weight: 600; }
+.field-group label { font-size: 10px; color: var(--text-faint); font-weight: 600; }
 .field-group input, .field-group textarea {
   width: 100%;
-  padding: 9px 10px;
+  padding: 7px 9px;
   border: 1px solid var(--border);
   background: var(--input-bg);
   border-radius: 7px;
-  font-size: 13px;
+  font-size: 12px;
   font-family: inherit;
   resize: vertical;
   color: var(--text);
@@ -284,11 +283,11 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 0 24px 60px; }
 .btn-toggle.active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
 
 /* 휴가자 행 */
-.vac-rows-wrap { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
-.vac-row { display: grid; grid-template-columns: 130px 1fr 32px; gap: 8px; align-items: center; }
+.vac-rows-wrap { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.vac-row { display: grid; grid-template-columns: 130px 1fr 32px; gap: 6px; align-items: center; }
 .vac-row input {
-  padding: 9px 10px; border: 1px solid var(--border); background: var(--input-bg);
-  border-radius: 7px; font-size: 13px;
+  padding: 7px 9px; border: 1px solid var(--border); background: var(--input-bg);
+  border-radius: 7px; font-size: 12px;
 }
 .vac-row input:focus { outline: none; border-color: var(--accent); background: #fff; }
 
