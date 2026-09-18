@@ -83,13 +83,34 @@
     <section id="tab-trend" class="tab-panel">
       <div class="split-view">
         <div class="edit-col">
-          <div class="field-section">
-            <div class="field-section-head">
-              <span class="field-section-title">01 이번주 트렌드</span>
+          <div id="trendPersonTabs" class="person-tabs"></div>
+          <p id="trendAuthorLine" class="author-line"></p>
+
+          <div id="trendNoMemberHint" class="hint hidden">이 팀에 등록된 팀원이 없습니다. 관리자(⚙)에서 팀원을 먼저 등록해주세요.</div>
+
+          <div id="trendEditBody">
+            <div class="field-section">
+              <div class="field-section-head"><span class="field-section-title">01 전체 레이아웃</span></div>
+              <div class="layout-toggle">
+                <button class="btn btn-outline" data-layout="row">☰ 좌우형 (이미지-내용 나란히)</button>
+                <button class="btn btn-outline" data-layout="col">▭ 상하형 (이미지 위, 내용 아래)</button>
+              </div>
             </div>
-            <div id="trendMemberChips" class="member-chips"></div>
-            <div id="trendItemsWrap" class="item-cards"></div>
-            <button id="addTrendItemBtn" class="btn btn-dashed">+ 트렌드 추가</button>
+
+            <div class="field-section">
+              <div class="field-section-head"><span class="field-section-title">02 제목</span></div>
+              <input id="trendTitleInput" placeholder="트렌드 제목" />
+            </div>
+
+            <div class="field-section">
+              <div class="field-section-head"><span class="field-section-title">03 이미지</span></div>
+              <div id="trendImagesGrid" class="trend-images-grid"></div>
+            </div>
+
+            <div class="field-section">
+              <div class="field-section-head"><span class="field-section-title">04 내용</span></div>
+              <textarea id="trendContentInput" rows="6" placeholder="트렌드 내용을 입력하세요"></textarea>
+            </div>
           </div>
 
           <div class="edit-actions">

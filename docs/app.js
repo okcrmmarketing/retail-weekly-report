@@ -57,6 +57,7 @@ let state = {
   order: [],
   activeTeamKey: null,
   activeType: 'work',
+  activeTrendAuthor: null,
 };
 let adminSessionPassword = null; // 로그인 성공 시 세션 동안만 메모리 보관 (재입력 방지용)
 
@@ -118,6 +119,7 @@ function renderTeamTabs() {
     btn.innerHTML = `<span class="team-tab-num">${String(idx + 1).padStart(2, '0')}</span>${escapeHtml(team.label)}`;
     btn.addEventListener('click', () => {
       state.activeTeamKey = team.key;
+      state.activeTrendAuthor = null;
       renderTeamTabs();
       renderWorkEdit();
       renderWorkPreview();
@@ -261,96 +263,97 @@ function renderWorkPreview() {
 }
 
 // ---------------- 트렌드보고(편집) ----------------
-function renderTrendEdit() {
-  const team = currentTeam();
-  const chipsWrap = document.getElementById('trendMemberChips');
-  const wrap = document.getElementById('trendItemsWrap');
-  chipsWrap.innerHTML = '';
-  wrap.innerHTML = '';
-  if (!team) return;
+function findOrCreateTrendItem(team, authorName) {
   const items = (state.trend[team.key] || (state.trend[team.key] = { items: [] })).items;
-
-  const members = team.members || [];
-  const authored = new Set(items.map((it) => it.author).filter(Boolean));
-  const pending = members.filter((m) => !authored.has(m));
-  if (pending.length) {
-    pending.forEach((name) => {
-      const chip = document.createElement('button');
-      chip.className = 'member-chip';
-      chip.textContent = '+ ' + name;
-      chip.addEventListener('click', () => {
-        items.push({ author: name, title: '', content: '', images: [] });
-        renderTrendEdit();
-      });
-      chipsWrap.appendChild(chip);
-    });
+  let item = items.find((it) => it.author === authorName);
+  if (!item) {
+    item = { author: authorName, title: '', content: '', images: [], layout: 'row' };
+    items.push(item);
   }
-
-  const datalistId = 'memberList_' + team.key;
-  let datalist = document.getElementById(datalistId);
-  if (!datalist) {
-    datalist = document.createElement('datalist');
-    datalist.id = datalistId;
-    document.body.appendChild(datalist);
-  }
-  datalist.innerHTML = members.map((m) => `<option value="${escapeAttr(m)}"></option>`).join('');
-
-  items.forEach((item, idx) => {
-    const card = document.createElement('div');
-    card.className = 'item-card';
-    card.innerHTML = `
-      <div class="item-card-top">
-        <span class="item-drag-handle">⠿</span>
-        <button class="btn-danger-icon" data-del title="삭제">✕</button>
-      </div>
-      <div class="field-row">
-        <div class="field-group"><label>작성자</label><input list="${datalistId}" placeholder="팀원 이름" value="${escapeAttr(item.author)}" data-f="author" /></div>
-        <div class="field-group"><label>제목</label><input placeholder="트렌드 제목" value="${escapeAttr(item.title)}" data-f="title" /></div>
-      </div>
-      <div class="field-row">
-        <div class="field-group full"><label>내용</label><textarea rows="3" placeholder="트렌드 내용" data-f="content">${escapeHtml(item.content)}</textarea></div>
-      </div>
-      <div class="trend-images" data-imgs></div>
-      <div class="trend-item-toolbar">
-        <label class="btn btn-outline btn-xs">이미지 첨부<input type="file" accept="image/*" multiple hidden data-imgadd /></label>
-      </div>
-    `;
-    card.querySelectorAll('[data-f]').forEach((inp) => {
-      inp.addEventListener('input', () => { item[inp.dataset.f] = inp.value; });
-    });
-    card.querySelector('[data-del]').addEventListener('click', () => {
-      items.splice(idx, 1);
-      renderTrendEdit();
-    });
-    card.querySelector('[data-imgadd]').addEventListener('change', async (e) => {
-      const files = Array.from(e.target.files || []);
-      for (const f of files) {
-        try {
-          const dataUrl = await compressImage(f);
-          item.images = item.images || [];
-          item.images.push(dataUrl);
-        } catch (err) { alert('이미지 처리 실패: ' + err.message); }
-      }
-      renderTrendImages(card.querySelector('[data-imgs]'), item);
-      e.target.value = '';
-    });
-    renderTrendImages(card.querySelector('[data-imgs]'), item);
-    wrap.appendChild(card);
-  });
+  return item;
 }
 
-function renderTrendImages(wrapEl, item) {
-  wrapEl.innerHTML = '';
+function renderTrendEdit() {
+  const team = currentTeam();
+  const tabsWrap = document.getElementById('trendPersonTabs');
+  const authorLine = document.getElementById('trendAuthorLine');
+  const noMemberHint = document.getElementById('trendNoMemberHint');
+  const editBody = document.getElementById('trendEditBody');
+  tabsWrap.innerHTML = '';
+  if (!team) return;
+
+  const members = team.members || [];
+  if (!members.length) {
+    noMemberHint.classList.remove('hidden');
+    editBody.classList.add('hidden');
+    authorLine.textContent = '';
+    return;
+  }
+  noMemberHint.classList.add('hidden');
+  editBody.classList.remove('hidden');
+
+  if (!state.activeTrendAuthor || !members.includes(state.activeTrendAuthor)) {
+    state.activeTrendAuthor = members[0];
+  }
+
+  members.forEach((name) => {
+    const btn = document.createElement('button');
+    btn.className = 'person-tab-btn' + (name === state.activeTrendAuthor ? ' active' : '');
+    btn.textContent = name;
+    btn.addEventListener('click', () => {
+      state.activeTrendAuthor = name;
+      renderTrendEdit();
+    });
+    tabsWrap.appendChild(btn);
+  });
+
+  const item = findOrCreateTrendItem(team, state.activeTrendAuthor);
+  authorLine.innerHTML = `작성자 <b>${escapeHtml(item.author)}</b>님의 트렌드보고`;
+
+  editBody.querySelectorAll('[data-layout]').forEach((btn) => {
+    btn.classList.toggle('active', (item.layout || 'row') === btn.dataset.layout);
+    btn.onclick = () => { item.layout = btn.dataset.layout; renderTrendEdit(); };
+  });
+
+  const titleInput = document.getElementById('trendTitleInput');
+  titleInput.value = item.title || '';
+  titleInput.oninput = () => { item.title = titleInput.value; };
+
+  const contentInput = document.getElementById('trendContentInput');
+  contentInput.value = item.content || '';
+  contentInput.oninput = () => { item.content = contentInput.value; };
+
+  renderTrendImages(item);
+}
+
+function renderTrendImages(item) {
+  const grid = document.getElementById('trendImagesGrid');
+  grid.innerHTML = '';
   (item.images || []).forEach((src, i) => {
     const box = document.createElement('div');
-    box.className = 'trend-img-wrap';
-    box.innerHTML = `<img src="${src}" /><button class="trend-img-remove">✕</button>`;
+    box.className = 'trend-img-box';
+    box.innerHTML = `<img src="${src}" /><button class="trend-img-remove" type="button">✕</button>`;
     box.querySelector('button').addEventListener('click', () => {
       item.images.splice(i, 1);
-      renderTrendImages(wrapEl, item);
+      renderTrendImages(item);
     });
-    wrapEl.appendChild(box);
+    grid.appendChild(box);
   });
+  const addBox = document.createElement('label');
+  addBox.className = 'trend-img-add';
+  addBox.innerHTML = `🖼 이미지 추가<input type="file" accept="image/*" multiple hidden />`;
+  addBox.querySelector('input').addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files || []);
+    for (const f of files) {
+      try {
+        const dataUrl = await compressImage(f);
+        item.images = item.images || [];
+        item.images.push(dataUrl);
+      } catch (err) { alert('이미지 처리 실패: ' + err.message); }
+    }
+    renderTrendImages(item);
+  });
+  grid.appendChild(addBox);
 }
 
 function compressImage(file, maxWidth = 1200, quality = 0.72) {
@@ -376,15 +379,28 @@ function compressImage(file, maxWidth = 1200, quality = 0.72) {
 }
 
 function buildTrendPreviewHtml(team) {
-  const items = (state.trend[team.key] || { items: [] }).items;
+  const allItems = (state.trend[team.key] || { items: [] }).items;
+  const members = team.members || [];
+  const ordered = members.length
+    ? members.map((m) => allItems.find((it) => it.author === m)).filter(Boolean)
+    : allItems;
+  const hasContent = ordered.some((t) => t.title || t.content || (t.images || []).length);
+
   let body = '<p class="preview-empty">작성된 내용이 없습니다.</p>';
-  if (items.length) {
-    body = items.map((t) => `
-      <div class="preview-trend-item">
-        <b>${t.author ? escapeHtml(t.author) + ' · ' : ''}${escapeHtml(t.title || '(제목 없음)')}</b>
-        <p>${escapeHtml(t.content || '')}</p>
-        ${(t.images || []).map((src) => `<img src="${src}" />`).join('')}
-      </div>`).join('');
+  if (hasContent) {
+    body = ordered.filter((t) => t.title || t.content || (t.images || []).length).map((t) => {
+      const imgsHtml = (t.images || []).map((src) => `<img src="${src}" />`).join('');
+      const layoutClass = t.layout === 'col' ? 'preview-trend-col' : 'preview-trend-row';
+      return `
+        <div class="preview-trend-item">
+          <p class="preview-trend-title">${escapeHtml(t.title || '(제목 없음)')}</p>
+          <p class="preview-trend-author">작성자 · ${escapeHtml(t.author || '')}</p>
+          <div class="preview-trend-body ${layoutClass}">
+            ${imgsHtml ? `<div class="preview-trend-imgs">${imgsHtml}</div>` : ''}
+            <p class="preview-trend-content">${escapeHtml(t.content || '')}</p>
+          </div>
+        </div>`;
+    }).join('');
   }
   return `
     <h2 class="preview-title">${escapeHtml(team.label)} 트렌드보고</h2>
@@ -782,12 +798,6 @@ function wireWorkPanel() {
 }
 
 function wireTrendPanel() {
-  document.getElementById('addTrendItemBtn').addEventListener('click', () => {
-    const team = currentTeam();
-    if (!team) return;
-    state.trend[team.key].items.push({ author: '', title: '', content: '', images: [] });
-    renderTrendEdit();
-  });
   document.getElementById('saveTrendBtn').addEventListener('click', saveCurrentTrend);
   document.getElementById('resetTrendBtn').addEventListener('click', () => { if (confirm('저장하지 않은 변경사항을 취소하고 서버 데이터로 되돌립니다. 계속할까요?')) loadWeek(); });
   document.getElementById('refreshTrendBtn').addEventListener('click', loadWeek);
