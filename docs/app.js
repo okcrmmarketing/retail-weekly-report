@@ -51,7 +51,13 @@ function weekOfMonthLabel(weekId) {
   const monday = weekIdToMonday(weekId);
   const year = monday.getUTCFullYear();
   const month = monday.getUTCMonth() + 1;
-  const weekOfMonth = Math.ceil(monday.getUTCDate() / 7);
+  // "1주차" = 그 달 1일이 속한 월~일 주(전달에서 넘어온 날짜가 섞여 있어도 그 주가 1주차).
+  // 예: 2026-09-01(화)이 속한 주는 8/31(월)~9/6(일) -> 9월 1주차, 그 다음 9/7~9/13이 2주차.
+  const firstOfMonth = new Date(Date.UTC(year, month - 1, 1));
+  const firstDow = (firstOfMonth.getUTCDay() + 6) % 7; // 월=0 ... 일=6
+  const firstWeekMonday = new Date(firstOfMonth);
+  firstWeekMonday.setUTCDate(firstOfMonth.getUTCDate() - firstDow);
+  const weekOfMonth = Math.round((monday - firstWeekMonday) / (7 * 86400000)) + 1;
   return `${year}년 ${month}월 ${weekOfMonth}주차`;
 }
 
