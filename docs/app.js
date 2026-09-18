@@ -32,6 +32,14 @@ function addWeeks(weekId, delta) {
   return getISOWeekId(monday);
 }
 
+function toPlainDate(iso) {
+  return (iso || '').replace(/-/g, '');
+}
+function toIsoDate(plain) {
+  const digits = (plain || '').replace(/\D/g, '').slice(0, 8);
+  if (digits.length !== 8) return digits;
+  return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
+}
 function formatDueDate(dateStr) {
   if (!dateStr) return '';
   const parts = dateStr.split('-');
@@ -190,7 +198,7 @@ function renderWorkEdit() {
           <div class="field-group">
             <label>완료예정일</label>
             <div class="due-date-row">
-              <input type="date" value="${escapeAttr(task.dueDate)}" data-f="dueDate" ${task.ongoing ? 'disabled' : ''} />
+              <input type="text" inputmode="numeric" maxlength="8" placeholder="20260930" value="${escapeAttr(toPlainDate(task.dueDate))}" data-f="dueDate" data-date-input ${task.ongoing ? 'disabled' : ''} />
               <button class="btn btn-toggle btn-xs ${task.ongoing ? 'active' : ''}" data-toggle-ongoing type="button">계속</button>
             </div>
           </div>
@@ -200,7 +208,14 @@ function renderWorkEdit() {
         </div>
       `;
       block.querySelectorAll('[data-f]').forEach((el) => {
-        el.addEventListener('input', () => { task[el.dataset.f] = el.value; });
+        if (el.dataset.f === 'dueDate') {
+          el.addEventListener('input', () => {
+            el.value = el.value.replace(/\D/g, '').slice(0, 8);
+            task.dueDate = toIsoDate(el.value);
+          });
+        } else {
+          el.addEventListener('input', () => { task[el.dataset.f] = el.value; });
+        }
       });
       block.querySelector('[data-del-task]').addEventListener('click', () => {
         group.tasks.splice(tIdx, 1);
