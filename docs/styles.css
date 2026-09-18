@@ -317,10 +317,14 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 0 24px 60px; }
 .preview-work-detail { font-size: 13px; color: var(--text-muted); margin: 4px 0 0; white-space: pre-wrap; }
 .preview-work-detail.hint { color: var(--text-faint); font-size: 12px; }
 
-.preview-work-group { display: flex; gap: 8px; padding: 6px 0; align-items: flex-start; }
+.preview-work-group { display: flex; gap: 8px; padding: 6px 0; align-items: stretch; }
 .preview-work-group + .preview-work-group { border-top: 1px solid #F0F0F0; margin-top: 6px; padding-top: 10px; }
-.preview-work-groupchip { flex: 0 0 62px; padding-top: 2px; }
-.preview-work-tasks { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.preview-work-groupchip { flex: 0 0 62px; display: flex; }
+.preview-work-groupchip .preview-chip {
+  flex: 1; display: flex; align-items: center; justify-content: center; text-align: center;
+  border-radius: 6px; padding: 8px 4px; line-height: 1.3; white-space: normal; word-break: keep-all;
+}
+.preview-work-tasks { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; justify-content: center; }
 .preview-work-item { padding: 0; }
 .preview-work-titleline { display: flex; align-items: center; gap: 8px; }
 .preview-trend-item { margin-bottom: 22px; padding-bottom: 18px; border-bottom: 1px solid #F0F0F0; }
