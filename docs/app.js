@@ -280,10 +280,10 @@ function buildWorkPreviewHtml(team) {
       body += '<div class="preview-block"><p class="preview-block-title">이번주 업무</p>';
       body += groups.filter((g) => (g.tasks || []).length).map((g) => `
         <div class="preview-work-group">
-          ${(g.tasks || []).map((it) => `
+          ${(g.tasks || []).map((it, i) => `
             <div class="preview-work-item">
               <div class="preview-work-line1">
-                <span class="preview-chip">${escapeHtml(g.category || '-')}</span>
+                ${i === 0 ? `<span class="preview-chip">${escapeHtml(g.category || '-')}</span>` : `<span class="preview-chip preview-chip-spacer">${escapeHtml(g.category || '-')}</span>`}
                 <span class="preview-work-title">${escapeHtml(it.title || '(제목 없음)')}</span>
                 <span class="due">${it.ongoing ? '계속' : formatDueDate(it.dueDate)}</span>
               </div>
@@ -601,11 +601,11 @@ function renderPresentSlide() {
   if (s.type === 'work') {
     const hasWork = s.workGroups.some((g) => (g.tasks || []).length);
     const workRowsHtml = hasWork
-      ? s.workGroups.flatMap((g) => (g.tasks || []).map((w) => `
+      ? s.workGroups.flatMap((g) => (g.tasks || []).map((w, i) => `
           <tr>
             <td>
               <div class="present-work-title-row">
-                <span class="preview-chip">${escapeHtml(g.category || '-')}</span>
+                ${i === 0 ? `<span class="preview-chip">${escapeHtml(g.category || '-')}</span>` : `<span class="preview-chip preview-chip-spacer">${escapeHtml(g.category || '-')}</span>`}
                 <span class="present-work-title">${escapeHtml(w.title || '(제목 없음)')}</span>
               </div>
               ${w.detail ? `<p class="present-work-detail">${escapeHtml(w.detail)}</p>` : ''}
