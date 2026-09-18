@@ -512,6 +512,17 @@ function buildPresentSlides() {
   }).filter((s) => s.team);
 }
 
+function renderPresentDots(slides) {
+  const wrap = document.getElementById('presentDots');
+  wrap.innerHTML = '';
+  slides.forEach((_, i) => {
+    const dot = document.createElement('button');
+    dot.className = 'present-dot' + (i === presentIdx ? ' active' : '');
+    dot.addEventListener('click', () => { presentIdx = i; renderPresentSlide(); });
+    wrap.appendChild(dot);
+  });
+}
+
 function renderPresentSlide() {
   const slides = buildPresentSlides();
   if (slides.length === 0) return;
@@ -519,32 +530,48 @@ function renderPresentSlide() {
   const s = slides[presentIdx];
   document.getElementById('presentPageNum').textContent = presentIdx + 1;
   document.getElementById('presentPageTotal').textContent = slides.length;
+  document.getElementById('presentWeekLabel').textContent = weekLabel(state.week).split(' ')[0];
+  renderPresentDots(slides);
+
+  const workRowsHtml = s.work.length
+    ? s.work.map((w) => `
+        <tr>
+          <td>
+            <span class="preview-chip">${escapeHtml(w.category || '-')}</span>
+            <p class="present-work-title">${escapeHtml(w.title || '(제목 없음)')}</p>
+            ${w.detail ? `<p class="present-work-detail">${escapeHtml(w.detail)}</p>` : ''}
+          </td>
+          <td class="col-date">${w.ongoing ? '계속 진행' : (formatDueDate(w.dueDate) ? formatDueDate(w.dueDate).replace('~', '') : '-')}</td>
+          <td class="col-note">${escapeHtml(w.note || '-')}</td>
+        </tr>`).join('')
+    : '';
 
   const workHtml = s.work.length
-    ? s.work.map((w) => `<div class="present-work-row"><b>${escapeHtml(w.category || '-')}</b> · ${w.ongoing ? '계속' : formatDueDate(w.dueDate)} · ${escapeHtml(w.title || '')} ${escapeHtml(w.detail || '')} ${w.note ? '(' + escapeHtml(w.note) + ')' : ''}</div>`).join('')
-    : '<p class="hint">등록된 업무보고가 없습니다.</p>';
+    ? `<table class="present-work-table">
+        <thead><tr><th>이번주 업무</th><th class="col-date">진행날짜</th><th class="col-note">비고</th></tr></thead>
+        <tbody>${workRowsHtml}</tbody>
+      </table>`
+    : '<p class="present-empty-note">등록된 업무보고가 없습니다.</p>';
+
+  const vacHtml = s.vacation.length
+    ? `<div class="present-vac-line"><span class="label">이번 주 휴가자</span><span class="val">${s.vacation.map((v) => `${escapeHtml(v.name || '-')} (${escapeHtml(v.period || '-')})`).join(', ')}</span></div>`
+    : `<div class="present-vac-line"><span class="label">이번 주 휴가자</span><span class="val">없음</span></div>`;
 
   const trendHtml = s.trend.length
-    ? s.trend.map((t) => `
+    ? s.trend.filter((t) => t.title || t.content || (t.images || []).length).map((t) => `
         <div class="present-trend-block">
           <b>${t.author ? escapeHtml(t.author) + ' · ' : ''}${escapeHtml(t.title || '(제목 없음)')}</b>
           <p>${escapeHtml(t.content || '')}</p>
           ${(t.images || []).map((src) => `<img src="${src}" />`).join('')}
         </div>`).join('')
-    : '<p class="hint">등록된 트렌드보고가 없습니다.</p>';
-
-  const vacHtml = s.vacation.length
-    ? s.vacation.map((v) => `<div class="present-work-row">${escapeHtml(v.name || '-')} · ${escapeHtml(v.period || '-')}</div>`).join('')
-    : '<p class="hint">이번 주 휴가자가 없습니다.</p>';
+    : '';
 
   document.getElementById('presentSlide').innerHTML = `
-    <h2>${escapeHtml(s.team.label)}</h2>
-    <h3>업무보고</h3>
+    <h2>${escapeHtml(s.team.label)} 주간업무 보고</h2>
+    <hr class="present-divider" />
     ${workHtml}
-    <h3>휴가자현황</h3>
     ${vacHtml}
-    <h3>트렌드보고</h3>
-    ${trendHtml}
+    ${trendHtml ? `<h3>트렌드보고</h3>${trendHtml}` : ''}
   `;
 }
 
@@ -552,12 +579,17 @@ function startPresent() {
   presentIdx = 0;
   renderPresentSlide();
   document.getElementById('presentOverlay').classList.remove('hidden');
-  const el = document.documentElement;
-  if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
 }
 function exitPresent() {
   document.getElementById('presentOverlay').classList.add('hidden');
   if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
+}
+function toggleFullscreen() {
+  if (document.fullscreenElement) {
+    document.exitFullscreen().catch(() => {});
+  } else {
+    document.documentElement.requestFullscreen().catch(() => {});
+  }
 }
 
 // ---------------- 복사 / 다운로드 / 인쇄 ----------------
@@ -750,6 +782,7 @@ function wireWeekNav() {
 function wirePresent() {
   document.getElementById('startPresentBtn').addEventListener('click', startPresent);
   document.getElementById('presentExitBtn').addEventListener('click', exitPresent);
+  document.getElementById('presentFullscreenBtn').addEventListener('click', toggleFullscreen);
   document.getElementById('presentPrevBtn').addEventListener('click', () => { presentIdx--; renderPresentSlide(); });
   document.getElementById('presentNextBtn').addEventListener('click', () => { presentIdx++; renderPresentSlide(); });
   document.addEventListener('keydown', (e) => {

@@ -146,13 +146,22 @@
     </div>
   </div>
 
-  <!-- 발표모드 전체화면 오버레이 -->
+  <!-- 발표모드 -->
   <div id="presentOverlay" class="present-overlay hidden">
-    <div class="present-page-indicator"><span id="presentPageNum">1</span> / <span id="presentPageTotal">1</span></div>
-    <button id="presentExitBtn" class="present-exit">닫기 ✕</button>
-    <button id="presentPrevBtn" class="present-arrow present-arrow-left">◀</button>
+    <div class="present-topbar">
+      <span class="present-page-indicator"><span id="presentPageNum">1</span> / <span id="presentPageTotal">1</span></span>
+      <span class="present-week-label" id="presentWeekLabel"></span>
+      <span class="present-topbar-actions">
+        <button id="presentFullscreenBtn" class="btn btn-outline btn-sm">⛶ 전체화면</button>
+        <button id="presentExitBtn" class="btn btn-outline btn-sm">✕ 편집으로 돌아가기 (Esc)</button>
+      </span>
+    </div>
     <div id="presentSlide" class="present-slide"></div>
-    <button id="presentNextBtn" class="present-arrow present-arrow-right">▶</button>
+    <div class="present-bottom-nav">
+      <button id="presentPrevBtn" class="present-nav-circle" aria-label="이전">‹</button>
+      <div id="presentDots" class="present-dots"></div>
+      <button id="presentNextBtn" class="present-nav-circle" aria-label="다음">›</button>
+    </div>
   </div>
 
   <!-- 인쇄 전용 영역 (전체 인쇄용) -->
