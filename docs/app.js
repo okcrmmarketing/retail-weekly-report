@@ -180,14 +180,16 @@ function renderWorkEdit() {
       <div class="task-list" data-tasks></div>
       <button class="btn btn-ghost btn-xs" data-add-task type="button">+ 세부 업무 추가</button>
     `;
-    card.querySelector('[data-cat]').addEventListener('input', (e) => { group.category = e.target.value; });
+    card.querySelector('[data-cat]').addEventListener('input', (e) => { group.category = e.target.value; renderWorkPreview(); });
     card.querySelector('[data-del-group]').addEventListener('click', () => {
       groups.splice(gIdx, 1);
       renderWorkEdit();
+      renderWorkPreview();
     });
     card.querySelector('[data-add-task]').addEventListener('click', () => {
       group.tasks.push({ title: '', detail: '', dueDate: '', ongoing: false });
       renderWorkEdit();
+      renderWorkPreview();
     });
 
     const tasksWrap = card.querySelector('[data-tasks]');
@@ -218,19 +220,22 @@ function renderWorkEdit() {
           el.addEventListener('input', () => {
             el.value = el.value.replace(/\D/g, '').slice(0, 8);
             task.dueDate = toIsoDate(el.value);
+            renderWorkPreview();
           });
         } else {
-          el.addEventListener('input', () => { task[el.dataset.f] = el.value; });
+          el.addEventListener('input', () => { task[el.dataset.f] = el.value; renderWorkPreview(); });
         }
       });
       block.querySelector('[data-del-task]').addEventListener('click', () => {
         group.tasks.splice(tIdx, 1);
         renderWorkEdit();
+        renderWorkPreview();
       });
       block.querySelector('[data-toggle-ongoing]').addEventListener('click', () => {
         task.ongoing = !task.ongoing;
         if (task.ongoing) task.dueDate = '';
         renderWorkEdit();
+        renderWorkPreview();
       });
       tasksWrap.appendChild(block);
     });
@@ -253,6 +258,7 @@ function renderWorkEdit() {
       groups.splice(gIdx, 0, moved);
       workDragSrcIdx = null;
       renderWorkEdit();
+      renderWorkPreview();
     });
     itemsWrap.appendChild(card);
   });
@@ -267,11 +273,12 @@ function renderWorkEdit() {
       <button class="btn-danger-icon" data-del title="삭제">✕</button>
     `;
     row.querySelectorAll('[data-f]').forEach((el) => {
-      el.addEventListener('input', () => { vacItems[idx][el.dataset.f] = el.value; });
+      el.addEventListener('input', () => { vacItems[idx][el.dataset.f] = el.value; renderWorkPreview(); });
     });
     row.querySelector('[data-del]').addEventListener('click', () => {
       vacItems.splice(idx, 1);
       renderWorkEdit();
+      renderWorkPreview();
     });
     vacWrap.appendChild(row);
   });
@@ -368,6 +375,7 @@ function renderTrendEdit() {
     btn.addEventListener('click', () => {
       state.activeTrendAuthor = name;
       renderTrendEdit();
+      renderTrendPreview();
     });
     tabsWrap.appendChild(btn);
   });
@@ -377,16 +385,16 @@ function renderTrendEdit() {
 
   editBody.querySelectorAll('[data-layout]').forEach((btn) => {
     btn.classList.toggle('active', (item.layout || 'row') === btn.dataset.layout);
-    btn.onclick = () => { item.layout = btn.dataset.layout; renderTrendEdit(); };
+    btn.onclick = () => { item.layout = btn.dataset.layout; renderTrendEdit(); renderTrendPreview(); };
   });
 
   const titleInput = document.getElementById('trendTitleInput');
   titleInput.value = item.title || '';
-  titleInput.oninput = () => { item.title = titleInput.value; };
+  titleInput.oninput = () => { item.title = titleInput.value; renderTrendPreview(); };
 
   const contentInput = document.getElementById('trendContentInput');
   contentInput.value = item.content || '';
-  contentInput.oninput = () => { item.content = contentInput.value; };
+  contentInput.oninput = () => { item.content = contentInput.value; renderTrendPreview(); };
 
   renderTrendImages(item);
 }
@@ -401,6 +409,7 @@ function renderTrendImages(item) {
     box.querySelector('button').addEventListener('click', () => {
       item.images.splice(i, 1);
       renderTrendImages(item);
+      renderTrendPreview();
     });
     grid.appendChild(box);
   });
@@ -417,6 +426,7 @@ function renderTrendImages(item) {
       } catch (err) { alert('이미지 처리 실패: ' + err.message); }
     }
     renderTrendImages(item);
+    renderTrendPreview();
   });
   grid.appendChild(addBox);
 }
@@ -523,6 +533,7 @@ async function loadPreviousWeekWork() {
     if (state.work[team.key].items.length && !confirm('현재 작성 중인 업무 항목을 저번주 업무로 덮어씁니다. 계속할까요?')) return;
     state.work[team.key].items = JSON.parse(JSON.stringify(prevItems));
     renderWorkEdit();
+    renderWorkPreview();
   } catch (e) { alert('저번주 업무를 불러오지 못했습니다: ' + e.message); }
 }
 
@@ -1057,12 +1068,14 @@ function wireWorkPanel() {
     if (!team) return;
     state.work[team.key].items.push({ category: '', tasks: [{ title: '', detail: '', dueDate: '', ongoing: false }] });
     renderWorkEdit();
+    renderWorkPreview();
   });
   document.getElementById('addVacationBtn').addEventListener('click', () => {
     const team = currentTeam();
     if (!team) return;
     state.vacation[team.key].items.push({ name: '', period: '' });
     renderWorkEdit();
+    renderWorkPreview();
   });
   document.getElementById('loadPrevWorkBtn').addEventListener('click', loadPreviousWeekWork);
   document.getElementById('saveWorkBtn').addEventListener('click', saveCurrentWork);
