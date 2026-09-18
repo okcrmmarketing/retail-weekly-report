@@ -186,10 +186,8 @@ function renderWorkEdit() {
           <span class="task-block-label">업무 ${tIdx + 1}</span>
           <button class="btn-danger-icon" data-del-task title="이 업무 삭제">✕</button>
         </div>
-        <div class="field-row">
-          <div class="field-group full"><label>업무 제목</label><input placeholder="업무 제목 작성" value="${escapeAttr(task.title)}" data-f="title" /></div>
-        </div>
-        <div class="field-row">
+        <div class="field-row task-title-row">
+          <div class="field-group"><label>업무 제목</label><input placeholder="업무 제목 작성" value="${escapeAttr(task.title)}" data-f="title" /></div>
           <div class="field-group">
             <label>완료예정일</label>
             <div class="due-date-row">

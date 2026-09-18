@@ -253,6 +253,7 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 0 24px 60px; }
 .task-block { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; background: var(--input-bg); }
 .task-block-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .task-block-label { font-size: 12px; font-weight: 700; color: var(--text-faint); }
+.task-title-row { grid-template-columns: 1.6fr 1fr; }
 
 .preview-work-group { margin-bottom: 14px; }
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
