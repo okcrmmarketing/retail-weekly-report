@@ -563,6 +563,42 @@ async function saveOrder() {
 
 // ---------------- 발표모드 ----------------
 let presentIdx = 0;
+
+// 발표모드는 A4 가로 한 장 분량으로 고정된 화면이라, 업무 항목이 많으면 한 페이지에
+// 다 안 들어간다. 정확한 픽셀 측정(DOM 렌더 후 높이 재기) 대신 페이지당 최대 업무
+// 개수를 고정해서 나누는 단순한 방식을 쓴다 -- 상세내용이 길면 가끔 여유가 빡빡할 수
+// 있지만, 측정 기반보다 훨씬 안정적이고 유지보수하기 쉽다.
+const MAX_WORK_ROWS_PER_PAGE = 7;
+
+function flattenWorkRows(workGroups) {
+  const rows = [];
+  workGroups.filter((g) => (g.tasks || []).length).forEach((g, gi) => {
+    (g.tasks || []).forEach((task) => { rows.push({ groupIdx: gi, category: g.category, task }); });
+  });
+  return rows;
+}
+
+function chunkArray(arr, size) {
+  const chunks = [];
+  for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size));
+  return chunks;
+}
+
+function withPageRowspans(pageRows) {
+  const result = [];
+  let i = 0;
+  while (i < pageRows.length) {
+    const gi = pageRows[i].groupIdx;
+    let count = 1;
+    while (i + count < pageRows.length && pageRows[i + count].groupIdx === gi) count++;
+    for (let k = 0; k < count; k++) {
+      result.push({ task: pageRows[i + k].task, category: pageRows[i].category, rowspan: k === 0 ? count : 0 });
+    }
+    i += count;
+  }
+  return result;
+}
+
 function buildPresentSlides() {
   const slides = [];
   state.order.forEach((teamKey) => {
@@ -575,8 +611,20 @@ function buildPresentSlides() {
     const trend = (members.length ? members.map((m) => trendAll.find((it) => it.author === m)).filter(Boolean) : trendAll)
       .filter((t) => t.title || t.content || (t.images || []).length);
 
-    const hasWork = workGroups.some((g) => (g.tasks || []).length);
-    if (hasWork || vacation.length) slides.push({ type: 'work', team, workGroups, vacation });
+    const flatRows = flattenWorkRows(workGroups);
+    if (flatRows.length || vacation.length) {
+      const pages = flatRows.length ? chunkArray(flatRows, MAX_WORK_ROWS_PER_PAGE) : [[]];
+      pages.forEach((pageRows, pi) => {
+        const isLastPage = pi === pages.length - 1;
+        slides.push({
+          type: 'work', team,
+          rows: withPageRowspans(pageRows),
+          vacation: isLastPage ? vacation : [],
+          showVacation: isLastPage,
+          pageLabel: pages.length > 1 ? ` (${pi + 1}/${pages.length})` : '',
+        });
+      });
+    }
     if (trend.length) slides.push({ type: 'trend', team, trend });
   });
   return slides;
@@ -604,35 +652,29 @@ function renderPresentSlide() {
   renderPresentDots(slides);
 
   if (s.type === 'work') {
-    const hasWork = s.workGroups.some((g) => (g.tasks || []).length);
-    const workRowsHtml = hasWork
-      ? s.workGroups.filter((g) => (g.tasks || []).length).flatMap((g) => {
-          const tasks = g.tasks || [];
-          return tasks.map((w, i) => `
-          <tr class="${i === 0 ? 'group-start' : ''}">
-            ${i === 0 ? `<td class="col-category" rowspan="${tasks.length}"><span class="preview-chip">${escapeHtml(g.category || '-')}</span></td>` : ''}
+    const workRowsHtml = s.rows.map((r) => `
+          <tr class="${r.rowspan ? 'group-start' : ''}">
+            ${r.rowspan ? `<td class="col-category" rowspan="${r.rowspan}"><span class="preview-chip">${escapeHtml(r.category || '-')}</span></td>` : ''}
             <td>
-              <span class="present-work-title">${escapeHtml(w.title || '(제목 없음)')}</span>
-              ${w.detail ? `<p class="present-work-detail">${escapeHtml(w.detail)}</p>` : ''}
+              <span class="present-work-title">${escapeHtml(r.task.title || '(제목 없음)')}</span>
+              ${r.task.detail ? `<p class="present-work-detail">${escapeHtml(r.task.detail)}</p>` : ''}
             </td>
-            <td class="col-date">${w.ongoing ? '계속 진행' : (formatDueDate(w.dueDate) ? formatDueDate(w.dueDate).replace('~', '') : '-')}</td>
-          </tr>`);
-        }).join('')
-      : '';
+            <td class="col-date">${r.task.ongoing ? '계속 진행' : (formatDueDate(r.task.dueDate) ? formatDueDate(r.task.dueDate).replace('~', '') : '-')}</td>
+          </tr>`).join('');
 
-    const workHtml = hasWork
+    const workHtml = s.rows.length
       ? `<table class="present-work-table">
           <thead><tr><th class="col-category">카테고리</th><th>업무</th><th class="col-date">진행날짜</th></tr></thead>
           <tbody>${workRowsHtml}</tbody>
         </table>`
       : '<p class="present-empty-note">등록된 업무보고가 없습니다.</p>';
 
-    const vacHtml = s.vacation.length
+    const vacHtml = !s.showVacation ? '' : (s.vacation.length
       ? `<div class="present-vac-line"><span class="label">이번 주 휴가자</span><span class="val">${s.vacation.map((v) => `${escapeHtml(v.name || '-')} (${escapeHtml(v.period || '-')})`).join(', ')}</span></div>`
-      : `<div class="present-vac-line"><span class="label">이번 주 휴가자</span><span class="val">없음</span></div>`;
+      : `<div class="present-vac-line"><span class="label">이번 주 휴가자</span><span class="val">없음</span></div>`);
 
     document.getElementById('presentSlide').innerHTML = `
-      <h2>${escapeHtml(s.team.label)} 주간업무 보고</h2>
+      <h2>${escapeHtml(s.team.label)} 주간업무 보고${escapeHtml(s.pageLabel || '')}</h2>
       <hr class="present-divider" />
       ${workHtml}
       ${vacHtml}

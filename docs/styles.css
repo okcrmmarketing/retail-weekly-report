@@ -371,21 +371,28 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 0 24px 60px; }
 /* 발표모드 */
 .present-overlay {
   position: fixed; inset: 0; background: var(--bg); z-index: 100;
-  display: flex; flex-direction: column; padding: 20px 24px;
+  display: flex; flex-direction: column; align-items: center; padding: 20px 24px;
   overflow-y: auto;
 }
 .present-topbar {
   display: flex; align-items: center; justify-content: space-between;
-  max-width: 1000px; width: 100%; margin: 0 auto 16px;
+  width: min(1040px, 92vw); margin: 0 auto 16px;
 }
 .present-page-indicator { color: var(--text-faint); font-size: 14px; min-width: 70px; }
 .present-week-label { font-weight: 700; font-size: 17px; }
 .present-topbar-actions { display: flex; gap: 8px; min-width: 70px; justify-content: flex-end; }
 
+/* A4 가로(297:210) 비율 고정 -- 업무가 많아 한 페이지를 넘으면 renderPresentSlide가
+   자동으로 다음 페이지 슬라이드를 만들어 이어준다(overflow:hidden은 만일의 텍스트
+   초과에 대한 안전장치일 뿐, 기본적으로는 페이지 분할로 해결한다). */
 .present-slide {
-  max-width: 1000px; width: 100%; margin: 0 auto; flex: 1;
+  width: min(1040px, 92vw);
+  aspect-ratio: 297 / 210;
+  margin: 0 auto;
   background: #fff; border-radius: var(--radius); padding: 32px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  box-sizing: border-box;
+  overflow: hidden;
 }
 .present-slide h2 { font-size: 22px; font-weight: 800; margin: 0 0 4px; }
 .present-slide h3 { font-size: 14px; color: var(--accent); margin: 20px 0 8px; font-weight: 700; }
