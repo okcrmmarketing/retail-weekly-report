@@ -16,10 +16,10 @@
  */
 
 const DEFAULT_TEAMS = [
-  { key: 'crm_marketing', label: 'CRM마케팅팀' },
-  { key: 'digital_ops', label: '디지털운영팀' },
-  { key: 'retail_planning', label: '리테일기획팀' },
-  { key: 'digital_data', label: '디지털데이터팀' },
+  { key: 'crm_marketing', label: 'CRM마케팅팀', members: [] },
+  { key: 'digital_ops', label: '디지털운영팀', members: [] },
+  { key: 'retail_planning', label: '리테일기획팀', members: [] },
+  { key: 'digital_data', label: '디지털데이터팀', members: [] },
 ];
 
 function corsHeaders() {

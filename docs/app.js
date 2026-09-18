@@ -241,10 +241,37 @@ function renderWorkPreview() {
 // ---------------- 트렌드보고(편집) ----------------
 function renderTrendEdit() {
   const team = currentTeam();
+  const chipsWrap = document.getElementById('trendMemberChips');
   const wrap = document.getElementById('trendItemsWrap');
+  chipsWrap.innerHTML = '';
   wrap.innerHTML = '';
   if (!team) return;
   const items = (state.trend[team.key] || (state.trend[team.key] = { items: [] })).items;
+
+  const members = team.members || [];
+  const authored = new Set(items.map((it) => it.author).filter(Boolean));
+  const pending = members.filter((m) => !authored.has(m));
+  if (pending.length) {
+    pending.forEach((name) => {
+      const chip = document.createElement('button');
+      chip.className = 'member-chip';
+      chip.textContent = '+ ' + name;
+      chip.addEventListener('click', () => {
+        items.push({ author: name, title: '', content: '', images: [] });
+        renderTrendEdit();
+      });
+      chipsWrap.appendChild(chip);
+    });
+  }
+
+  const datalistId = 'memberList_' + team.key;
+  let datalist = document.getElementById(datalistId);
+  if (!datalist) {
+    datalist = document.createElement('datalist');
+    datalist.id = datalistId;
+    document.body.appendChild(datalist);
+  }
+  datalist.innerHTML = members.map((m) => `<option value="${escapeAttr(m)}"></option>`).join('');
 
   items.forEach((item, idx) => {
     const card = document.createElement('div');
@@ -255,7 +282,8 @@ function renderTrendEdit() {
         <button class="btn-danger-icon" data-del title="삭제">✕</button>
       </div>
       <div class="field-row">
-        <div class="field-group full"><label>제목</label><input placeholder="트렌드 제목" value="${escapeAttr(item.title)}" data-f="title" /></div>
+        <div class="field-group"><label>작성자</label><input list="${datalistId}" placeholder="팀원 이름" value="${escapeAttr(item.author)}" data-f="author" /></div>
+        <div class="field-group"><label>제목</label><input placeholder="트렌드 제목" value="${escapeAttr(item.title)}" data-f="title" /></div>
       </div>
       <div class="field-row">
         <div class="field-group full"><label>내용</label><textarea rows="3" placeholder="트렌드 내용" data-f="content">${escapeHtml(item.content)}</textarea></div>
@@ -331,7 +359,7 @@ function buildTrendPreviewHtml(team) {
   if (items.length) {
     body = items.map((t) => `
       <div class="preview-trend-item">
-        <b>${escapeHtml(t.title || '(제목 없음)')}</b>
+        <b>${t.author ? escapeHtml(t.author) + ' · ' : ''}${escapeHtml(t.title || '(제목 없음)')}</b>
         <p>${escapeHtml(t.content || '')}</p>
         ${(t.images || []).map((src) => `<img src="${src}" />`).join('')}
       </div>`).join('');
@@ -461,7 +489,7 @@ function renderPresentSlide() {
   const trendHtml = s.trend.length
     ? s.trend.map((t) => `
         <div class="present-trend-block">
-          <b>${escapeHtml(t.title || '(제목 없음)')}</b>
+          <b>${t.author ? escapeHtml(t.author) + ' · ' : ''}${escapeHtml(t.title || '(제목 없음)')}</b>
           <p>${escapeHtml(t.content || '')}</p>
           ${(t.images || []).map((src) => `<img src="${src}" />`).join('')}
         </div>`).join('')
@@ -513,7 +541,7 @@ function previewToText(team, type) {
   const items = (state.trend[team.key] || { items: [] }).items;
   let out = `${team.label} 트렌드보고 - ${weekLabel(state.week)}\n\n`;
   if (!items.length) out += '(등록된 트렌드 없음)\n';
-  items.forEach((t) => { out += `■ ${t.title || '(제목 없음)'}\n${t.content || ''}\n\n`; });
+  items.forEach((t) => { out += `■ ${t.author ? t.author + ' - ' : ''}${t.title || '(제목 없음)'}\n${t.content || ''}\n\n`; });
   return out;
 }
 
@@ -572,11 +600,18 @@ function renderAdminTeamList() {
     row.className = 'admin-team-row';
     row.innerHTML = `
       <input value="${escapeAttr(team.key)}" placeholder="key(영문)" data-f="key" style="flex:1" />
-      <input value="${escapeAttr(team.label)}" placeholder="팀 이름" data-f="label" style="flex:2" />
+      <input value="${escapeAttr(team.label)}" placeholder="팀 이름" data-f="label" style="flex:1" />
+      <input value="${escapeAttr((team.members || []).join(', '))}" placeholder="팀원(쉼표로 구분)" data-f="members" style="flex:2" />
       <button class="btn-danger-icon" data-del>✕</button>
     `;
     row.querySelectorAll('[data-f]').forEach((el) => {
-      el.addEventListener('input', () => { team[el.dataset.f] = el.value; });
+      el.addEventListener('input', () => {
+        if (el.dataset.f === 'members') {
+          team.members = el.value.split(',').map((s) => s.trim()).filter(Boolean);
+        } else {
+          team[el.dataset.f] = el.value;
+        }
+      });
     });
     row.querySelector('[data-del]').addEventListener('click', () => {
       state.teams.splice(idx, 1);
@@ -618,7 +653,7 @@ function wireAdmin() {
   });
 
   document.getElementById('adminAddTeamBtn').addEventListener('click', () => {
-    state.teams.push({ key: '', label: '' });
+    state.teams.push({ key: '', label: '', members: [] });
     renderAdminTeamList();
   });
 
@@ -727,7 +762,7 @@ function wireTrendPanel() {
   document.getElementById('addTrendItemBtn').addEventListener('click', () => {
     const team = currentTeam();
     if (!team) return;
-    state.trend[team.key].items.push({ title: '', content: '', images: [] });
+    state.trend[team.key].items.push({ author: '', title: '', content: '', images: [] });
     renderTrendEdit();
   });
   document.getElementById('saveTrendBtn').addEventListener('click', saveCurrentTrend);

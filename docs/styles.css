@@ -197,6 +197,14 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 16px 24px 60px; }
 }
 .field-section-title { font-weight: 700; font-size: 14px; }
 
+/* 팀원 빠른추가 칩 */
+.member-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.member-chip {
+  border: 1px dashed var(--accent); background: var(--accent-soft); color: var(--accent-dark);
+  border-radius: 999px; padding: 5px 12px; font-size: 12px; cursor: pointer; font-weight: 600;
+}
+.member-chip:hover { background: var(--accent); color: #fff; }
+
 /* 항목 카드 */
 .item-cards { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
 .item-card {
@@ -244,7 +252,7 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 16px 24px 60px; }
 .preview-card {
   background: var(--card);
   border-radius: var(--radius);
-  padding: 28px 26px;
+  padding: 18px;
   min-height: 320px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
