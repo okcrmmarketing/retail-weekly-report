@@ -393,8 +393,14 @@ function renderTrendEdit() {
   titleInput.oninput = () => { item.title = titleInput.value; renderTrendPreview(); };
 
   const contentInput = document.getElementById('trendContentInput');
-  contentInput.value = item.content || '';
-  contentInput.oninput = () => { item.content = contentInput.value; renderTrendPreview(); };
+  contentInput.innerHTML = item.content || '';
+  contentInput.oninput = () => { item.content = contentInput.innerHTML; renderTrendPreview(); };
+  contentInput.onblur = () => {
+    const clean = sanitizeRichContent(contentInput);
+    item.content = clean;
+    contentInput.innerHTML = clean;
+  };
+  wireRichToolbar(contentInput);
 
   renderTrendImages(item);
 }
@@ -472,7 +478,7 @@ function buildTrendPreviewHtml(team) {
           <p class="preview-trend-author">작성자 · ${escapeHtml(t.author || '')}</p>
           <div class="preview-trend-body ${layoutClass}">
             ${imgsHtml ? `<div class="preview-trend-imgs">${imgsHtml}</div>` : ''}
-            <p class="preview-trend-content">${escapeHtml(t.content || '')}</p>
+            <p class="preview-trend-content">${t.content || ''}</p>
           </div>
         </div>`;
     }).join('');
@@ -817,7 +823,7 @@ function renderPresentSlide() {
         <p class="present-trend-title-text">${escapeHtml(t.title || '(제목 없음)')}</p>
         <div class="present-trend-body ${layoutClass}">
           ${imgsHtml ? `<div class="present-trend-imgs">${imgsHtml}</div>` : ''}
-          <p class="present-trend-content-text">${escapeHtml(t.content || '')}</p>
+          <p class="present-trend-content-text">${t.content || ''}</p>
         </div>
       </div>
     `;
@@ -864,7 +870,7 @@ function previewToText(team, type) {
   const items = (state.trend[team.key] || { items: [] }).items;
   let out = `${team.label} 트렌드보고 - ${weekLabel(state.week)}\n\n`;
   if (!items.length) out += '(등록된 트렌드 없음)\n';
-  items.forEach((t) => { out += `■ ${t.author ? t.author + ' - ' : ''}${t.title || '(제목 없음)'}\n${t.content || ''}\n\n`; });
+  items.forEach((t) => { out += `■ ${t.author ? t.author + ' - ' : ''}${t.title || '(제목 없음)'}\n${richToPlainText(t.content)}\n\n`; });
   return out;
 }
 
@@ -999,6 +1005,61 @@ function wireAdmin() {
       msg.textContent = '비밀번호가 변경되었습니다.';
     } catch (e) { msg.textContent = '변경 실패: ' + e.message; }
   });
+}
+
+// ---------------- 트렌드 내용 서식(굵게/색상) ----------------
+// contenteditable에서 나오는 HTML은 브라우저/붙여넣기에 따라 지저분할 수 있어(중첩 div,
+// 임의 style, 붙여넣은 이미지/스크립트 등) 그대로 저장하면 안전하지 않다 -- 굵게(b)와
+// 글자색(span의 color만) 딱 두 가지만 허용하고 나머지 태그는 벗겨서 텍스트/줄바꿈만 남긴다.
+// 타이핑 중(매 입력마다)이 아니라 blur(포커스 벗어날 때) 시점에만 정제해서 커서 위치가
+// 안 튀게 한다.
+function sanitizeRichContent(root) {
+  function walk(node) {
+    let out = '';
+    node.childNodes.forEach((child) => {
+      if (child.nodeType === Node.TEXT_NODE) {
+        out += escapeHtml(child.textContent);
+      } else if (child.nodeType === Node.ELEMENT_NODE) {
+        const tag = child.tagName.toLowerCase();
+        if (tag === 'br') {
+          out += '<br>';
+        } else if (tag === 'b' || tag === 'strong') {
+          out += `<b>${walk(child)}</b>`;
+        } else if (tag === 'span' || tag === 'font') {
+          const color = child.style && child.style.color;
+          const inner = walk(child);
+          out += color ? `<span style="color:${color}">${inner}</span>` : inner;
+        } else if (tag === 'div' || tag === 'p') {
+          out += walk(child) + '<br>';
+        } else {
+          out += walk(child);
+        }
+      }
+    });
+    return out;
+  }
+  let html = walk(root);
+  html = html.replace(/(<br>)+$/g, ''); // 맨 끝 빈 줄들 정리
+  return html;
+}
+
+function wireRichToolbar(contentInput) {
+  const toolbar = contentInput.previousElementSibling;
+  if (!toolbar || !toolbar.classList.contains('rich-toolbar')) return;
+  toolbar.querySelectorAll('[data-cmd]').forEach((btn) => {
+    btn.onmousedown = (e) => e.preventDefault(); // 클릭해도 에디터 포커스/선택영역이 안 풀리게
+    btn.onclick = () => { document.execCommand(btn.dataset.cmd, false, null); contentInput.dispatchEvent(new Event('input')); };
+  });
+  toolbar.querySelectorAll('[data-color]').forEach((btn) => {
+    btn.onmousedown = (e) => e.preventDefault();
+    btn.onclick = () => { document.execCommand('foreColor', false, btn.dataset.color); contentInput.dispatchEvent(new Event('input')); };
+  });
+}
+
+function richToPlainText(html) {
+  const div = document.createElement('div');
+  div.innerHTML = (html || '').replace(/<br\s*\/?>/gi, '\n');
+  return div.textContent || '';
 }
 
 // ---------------- 공통 유틸 ----------------

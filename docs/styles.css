@@ -234,6 +234,21 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 0 24px 60px; }
 }
 #trendTitleInput:focus, #trendContentInput:focus { outline: none; border-color: var(--accent); background: #fff; }
 
+.rich-toolbar { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
+.rich-btn {
+  border: 1px solid var(--border); background: #fff; border-radius: 6px;
+  padding: 4px 10px; font-size: 12px; cursor: pointer; color: var(--text);
+}
+.rich-btn:hover { border-color: var(--accent); color: var(--accent); }
+.rich-color-btn {
+  width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--border);
+  background: var(--dot); cursor: pointer; padding: 0;
+}
+.rich-color-btn:hover { border-color: var(--text); }
+.rich-editable { min-height: 140px; max-height: 280px; overflow-y: auto; }
+.rich-editable:empty::before { content: attr(data-placeholder); color: var(--text-faint); }
+.rich-editable b { font-weight: 700; }
+
 /* 항목 카드 */
 .item-cards { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
 .item-card {
