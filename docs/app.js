@@ -306,6 +306,7 @@ function buildWorkPreviewHtml(team) {
   }
 
   return `
+    <p class="print-dept-header">리테일기획부 주간업무</p>
     <h2 class="preview-title">${escapeHtml(team.label)} 주간업무 보고</h2>
     <p class="preview-subtitle">${escapeHtml(weekLabel(state.week))}</p>
     <hr class="preview-divider" />
@@ -461,6 +462,7 @@ function buildTrendPreviewHtml(team) {
     }).join('');
   }
   return `
+    <p class="print-dept-header">리테일기획부 주간업무</p>
     <h2 class="preview-title">${escapeHtml(team.label)} 트렌드보고</h2>
     <p class="preview-subtitle">${escapeHtml(weekLabel(state.week))}</p>
     <hr class="preview-divider" />

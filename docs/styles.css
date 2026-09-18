@@ -313,8 +313,8 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 0 24px 60px; }
   background: var(--text); color: #fff; font-size: 11px; font-weight: 700;
   padding: 2px 8px; border-radius: 5px; white-space: nowrap;
 }
-.preview-work-title { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.preview-work-titleline .due { color: var(--text-faint); font-size: 12px; white-space: nowrap; }
+.preview-work-title { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+.preview-work-titleline .due { color: var(--text-faint); font-size: 12px; white-space: nowrap; margin-left: auto; text-align: right; }
 .preview-work-detail { font-size: 13px; color: var(--text-muted); margin: 4px 0 0; white-space: pre-wrap; }
 .preview-work-detail.hint { color: var(--text-faint); font-size: 12px; }
 
@@ -474,6 +474,7 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 0 24px 60px; }
 }
 
 /* ---------------- 인쇄 ---------------- */
+.print-dept-header { display: none; }
 @media print {
   .app-header, .type-tabs, .panel-toolbar, .edit-col, .preview-actions,
   .present-topbar, .present-bottom-nav { display: none !important; }
@@ -483,4 +484,16 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 0 24px 60px; }
   .preview-card { box-shadow: none; border: none; padding: 0; }
   .print-only-area.active { display: block; }
   .print-only-area .preview-card { page-break-after: always; }
+
+  .print-dept-header {
+    display: block; text-align: right; font-size: 12px; font-weight: 700;
+    color: var(--text); margin-bottom: 10px;
+  }
+
+  /* 인쇄할 때는 화면용 연한 회색 글자를 전부 검정으로 바꿔 가독성을 높인다. */
+  .preview-work-detail, .preview-work-detail.hint, .preview-vac-line, .preview-vac-line .val,
+  .preview-work-titleline .due, .preview-subtitle, .preview-trend-author, .preview-trend-content,
+  .hint {
+    color: #000 !important;
+  }
 }
