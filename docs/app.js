@@ -282,10 +282,10 @@ function buildWorkPreviewHtml(team) {
       body += '<div class="preview-block"><p class="preview-block-title">이번주 업무</p>';
       body += groups.filter((g) => (g.tasks || []).length).map((g) => `
         <div class="preview-work-group">
-          <span class="preview-chip">${escapeHtml(g.category || '-')}</span>
           ${(g.tasks || []).map((it) => `
             <div class="preview-work-item">
               <div class="preview-work-line1">
+                <span class="preview-chip">${escapeHtml(g.category || '-')}</span>
                 <span class="preview-work-title">${escapeHtml(it.title || '(제목 없음)')}</span>
                 <span class="due">${it.ongoing ? '계속' : formatDueDate(it.dueDate)}</span>
               </div>
@@ -606,8 +606,10 @@ function renderPresentSlide() {
       ? s.workGroups.flatMap((g) => (g.tasks || []).map((w) => `
           <tr>
             <td>
-              <span class="preview-chip">${escapeHtml(g.category || '-')}</span>
-              <p class="present-work-title">${escapeHtml(w.title || '(제목 없음)')}</p>
+              <div class="present-work-title-row">
+                <span class="preview-chip">${escapeHtml(g.category || '-')}</span>
+                <span class="present-work-title">${escapeHtml(w.title || '(제목 없음)')}</span>
+              </div>
               ${w.detail ? `<p class="present-work-detail">${escapeHtml(w.detail)}</p>` : ''}
             </td>
             <td class="col-date">${w.ongoing ? '계속 진행' : (formatDueDate(w.dueDate) ? formatDueDate(w.dueDate).replace('~', '') : '-')}</td>

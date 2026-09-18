@@ -255,7 +255,6 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 0 24px 60px; }
 .task-block-label { font-size: 12px; font-weight: 700; color: var(--text-faint); }
 
 .preview-work-group { margin-bottom: 14px; }
-.preview-work-group > .preview-chip { margin-bottom: 6px; display: inline-block; }
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
 .field-group { display: flex; flex-direction: column; gap: 4px; }
 .field-group.full { grid-column: 1 / -1; }
@@ -317,10 +316,11 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 0 24px 60px; }
 .preview-work-line1 { display: flex; align-items: center; gap: 8px; }
 .preview-chip {
   background: var(--text); color: #fff; font-size: 11px; font-weight: 700;
-  padding: 2px 8px; border-radius: 5px; white-space: nowrap;
+  padding: 2px 8px; border-radius: 5px; white-space: nowrap; flex: 0 0 auto;
 }
-.preview-work-title { font-weight: 700; font-size: 14px; flex: 1; }
-.preview-work-line1 .due { color: var(--text-faint); font-size: 12px; white-space: nowrap; }
+.preview-work-line1 { flex-wrap: nowrap; }
+.preview-work-title { font-weight: 700; font-size: 14px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.preview-work-line1 .due { color: var(--text-faint); font-size: 12px; white-space: nowrap; flex: 0 0 auto; }
 .preview-work-detail { font-size: 13px; color: var(--text-muted); margin: 4px 0 0; white-space: pre-wrap; }
 .preview-work-detail.hint { color: var(--text-faint); font-size: 12px; }
 .preview-trend-item { margin-bottom: 22px; padding-bottom: 18px; border-bottom: 1px solid #F0F0F0; }
@@ -394,7 +394,8 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 0 24px 60px; }
 .present-work-table thead th.col-date, .present-work-table thead th.col-note { text-align: center; width: 110px; }
 .present-work-table tbody td { padding: 12px 14px; border-top: 1px solid var(--border); vertical-align: top; }
 .present-work-table tbody td.col-date, .present-work-table tbody td.col-note { text-align: center; color: var(--text-muted); white-space: nowrap; }
-.present-work-title { font-weight: 700; font-size: 14px; margin: 4px 0 2px; }
+.present-work-title-row { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
+.present-work-title { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .present-work-detail { font-size: 12px; color: var(--text-faint); }
 .present-empty-note { color: var(--text-faint); font-size: 13px; padding: 10px 0; }
 
