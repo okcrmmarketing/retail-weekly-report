@@ -219,7 +219,17 @@ function renderWorkEdit() {
           </div>
         </div>
         <div class="field-row">
-          <div class="field-group full"><label>상세내용</label><textarea rows="2" placeholder="업무 상세내용 작성" data-f="detail">${escapeHtml(task.detail)}</textarea></div>
+          <div class="field-group full">
+            <label>상세내용</label>
+            <div class="rich-toolbar rich-toolbar-sm">
+              <button type="button" class="rich-btn" data-cmd="bold" title="굵게"><b>B</b></button>
+              <button type="button" class="rich-color-btn" data-color="#171717" title="검정" style="--dot:#171717"></button>
+              <button type="button" class="rich-color-btn" data-color="#FF571F" title="포인트색" style="--dot:#FF571F"></button>
+              <button type="button" class="rich-highlight-btn" data-highlight="#FFF3A0" title="하이라이트" style="--dot:#FFF3A0"></button>
+              <button type="button" class="rich-btn" data-cmd="removeFormat" title="서식 지우기">지우기</button>
+            </div>
+            <div class="rich-editable rich-editable-sm" contenteditable="true" data-placeholder="업무 상세내용 작성" data-f="detail"></div>
+          </div>
         </div>
       `;
       block.querySelectorAll('[data-f]').forEach((el) => {
@@ -229,6 +239,13 @@ function renderWorkEdit() {
             task.dueDate = toIsoDate(el.value);
             renderWorkPreview();
           });
+        } else if (el.dataset.f === 'detail') {
+          // 업무 상세내용도 하이라이트를 넣을 수 있게 트렌드 내용과 같은 방식(contenteditable +
+          // 정제)으로 바꿨다(2026-09-23 "업무내용에 하이라이트 치게 가능한가" 요청).
+          el.innerHTML = task.detail || '';
+          el.oninput = () => { task.detail = sanitizeRichContent(el); renderWorkPreview(); };
+          el.onblur = () => { el.innerHTML = task.detail; };
+          wireRichToolbar(el);
         } else {
           el.addEventListener('input', () => { task[el.dataset.f] = el.value; renderWorkPreview(); });
         }
@@ -312,7 +329,7 @@ function buildWorkPreviewHtml(team) {
                   <span class="preview-work-title">${escapeHtml(it.title || '(제목 없음)')}</span>
                   <span class="due">${it.ongoing ? '계속' : formatDueDate(it.dueDate)}</span>
                 </div>
-                ${it.detail ? `<p class="preview-work-detail">${escapeHtml(it.detail)}</p>` : ''}
+                ${it.detail ? `<p class="preview-work-detail">${it.detail}</p>` : ''}
               </div>`).join('')}
           </div>
         </div>`).join('');
@@ -824,7 +841,7 @@ function renderPresentSlide() {
             ${r.rowspan ? `<td class="col-category" rowspan="${r.rowspan}"><span class="preview-chip">${escapeHtml(r.category || '-')}</span></td>` : ''}
             <td>
               <span class="present-work-title">${escapeHtml(r.task.title || '(제목 없음)')}</span>
-              ${r.task.detail ? `<p class="present-work-detail">${escapeHtml(r.task.detail)}</p>` : ''}
+              ${r.task.detail ? `<p class="present-work-detail">${r.task.detail}</p>` : ''}
             </td>
             <td class="col-date">${r.task.ongoing ? '계속 진행' : (formatDueDate(r.task.dueDate) ? formatDueDate(r.task.dueDate).replace('~', '') : '-')}</td>
           </tr>`).join('');
@@ -897,7 +914,7 @@ function previewToText(team, type) {
     groups.forEach((g) => {
       (g.tasks || []).forEach((it) => {
         const due = it.ongoing ? '계속' : (it.dueDate || '-');
-        out += `  - [${g.category || '-'}] ${it.title || ''} ${it.detail || ''} (예정일: ${due})\n`;
+        out += `  - [${g.category || '-'}] ${it.title || ''} ${richToPlainText(it.detail)} (예정일: ${due})\n`;
       });
     });
     out += '\n■ 이번 주 휴가자\n';
@@ -1088,8 +1105,14 @@ function sanitizeRichContent(root) {
           out += `<b>${walk(child)}</b>`;
         } else if (tag === 'span' || tag === 'font') {
           const color = (child.style && child.style.color) || child.getAttribute('color');
+          // 하이라이트(형광펜, 2026-09-23 "업무내용에 하이라이트 치게 가능한가" 요청)도 글자색과
+          // 같은 span에 얹혀서 올 수 있어(둘 다 선택한 뒤 순서대로 적용하면) 같이 허용한다.
+          const bg = child.style && child.style.backgroundColor;
           const inner = walk(child);
-          out += color ? `<span style="color:${color}">${inner}</span>` : inner;
+          const styles = [];
+          if (color) styles.push(`color:${color}`);
+          if (bg) styles.push(`background-color:${bg}`);
+          out += styles.length ? `<span style="${styles.join(';')}">${inner}</span>` : inner;
         } else if (tag === 'div' || tag === 'p') {
           // 컨텐트에디터블은 첫 줄만 루트에 맨 텍스트로 두고, 엔터로 나뉜 그 다음 줄부터
           // <div>로 감싸는 경우가 많다(크롬/엣지 공통) -- 그래서 div 앞에 줄바꿈이 이미
@@ -1164,6 +1187,20 @@ function wireRichToolbar(contentInput) {
         return span;
       });
       if (!ok) { alert('먼저 색을 바꿀 글자를 드래그해서 선택해주세요.'); return; }
+      contentInput.dispatchEvent(new Event('input'));
+    };
+  });
+  // 하이라이트(형광펜, 2026-09-23 "발표할 때 주요 내용에 하이라이트" 요청) — 색상 버튼과 같은
+  // applyInlineWrap 방식이지만 글자색이 아니라 배경색을 입힌다.
+  toolbar.querySelectorAll('[data-highlight]').forEach((btn) => {
+    btn.onmousedown = (e) => e.preventDefault();
+    btn.onclick = () => {
+      const ok = applyInlineWrap(() => {
+        const span = document.createElement('span');
+        span.style.backgroundColor = btn.dataset.highlight;
+        return span;
+      });
+      if (!ok) { alert('먼저 하이라이트할 글자를 드래그해서 선택해주세요.'); return; }
       contentInput.dispatchEvent(new Event('input'));
     };
   });

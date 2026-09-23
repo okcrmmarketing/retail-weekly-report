@@ -249,6 +249,26 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 0 24px 60px; }
 .rich-editable { min-height: 140px; max-height: 280px; overflow-y: auto; }
 .rich-editable:empty::before { content: attr(data-placeholder); color: var(--text-faint); }
 .rich-editable b { font-weight: 700; }
+.rich-editable[style*="background-color"], .rich-editable span[style*="background-color"] { border-radius: 3px; padding: 0 2px; }
+
+/* 하이라이트(형광펜) 버튼 — 글자색 버튼(원형)과 구분되게 각진 모양으로(2026-09-23 요청) */
+.rich-highlight-btn {
+  width: 22px; height: 22px; border-radius: 5px; border: 1.5px solid var(--border);
+  background: var(--dot); cursor: pointer; padding: 0;
+}
+.rich-highlight-btn:hover { border-color: var(--text); }
+
+/* 업무 상세내용용 컴팩트 버전(2026-09-23) — 트렌드보고 내용칸보다 훨씬 좁은 자리에 들어가서
+   툴바/입력칸 둘 다 줄이고, 다른 입력칸들과 구분되게 테두리도 넣는다(트렌드 쪽은 넓은 전용
+   영역이라 테두리 없이도 위치가 분명해서 그대로 둠). */
+.rich-toolbar-sm { gap: 4px; margin-bottom: 4px; }
+.rich-toolbar-sm .rich-btn { padding: 2px 7px; font-size: 11px; }
+.rich-toolbar-sm .rich-color-btn, .rich-toolbar-sm .rich-highlight-btn { width: 18px; height: 18px; }
+.rich-editable-sm {
+  min-height: 44px; max-height: 140px; border: 1px solid var(--border); background: var(--input-bg);
+  border-radius: 7px; padding: 7px 9px; font-size: 12px;
+}
+.rich-editable-sm:focus { outline: none; border-color: var(--accent); background: #fff; }
 
 /* 항목 카드 */
 .item-cards { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
