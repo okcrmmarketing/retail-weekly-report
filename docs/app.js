@@ -241,8 +241,12 @@ function renderWorkEdit() {
           });
         } else if (el.dataset.f === 'detail') {
           // 업무 상세내용도 하이라이트를 넣을 수 있게 트렌드 내용과 같은 방식(contenteditable +
-          // 정제)으로 바꿨다(2026-09-23 "업무내용에 하이라이트 치게 가능한가" 요청).
-          el.innerHTML = task.detail || '';
+          // 정제)으로 바꿨다(2026-09-23 "업무내용에 하이라이트 치게 가능한가" 요청). 예전엔
+          // <textarea>라 줄바꿈이 그냥 문자 "\n"으로 저장돼 있었는데, HTML로 취급하는 이 칸은
+          // "\n"을 줄바꿈으로 안 쳐줘서 예전 글이 한 줄로 붙어버리는 문제가 있었다(2026-09-23
+          // 실측, "이전에 작성한 글 엔터가 안먹혀") -- 처음 불러올 때만 "\n"을 <br>로 바꿔준다
+          // (새로 입력한 내용은 sanitizeRichContent가 이미 <br>로 저장해서 중복 변환 안 됨).
+          el.innerHTML = (task.detail || '').replace(/\n/g, '<br>');
           el.oninput = () => { task.detail = sanitizeRichContent(el); renderWorkPreview(); };
           el.onblur = () => { el.innerHTML = task.detail; };
           wireRichToolbar(el);
@@ -1172,9 +1176,25 @@ function wireRichToolbar(contentInput) {
     btn.onclick = () => {
       const sel = window.getSelection();
       if (!sel || sel.rangeCount === 0 || sel.isCollapsed) { alert('먼저 서식을 지울 글자를 드래그해서 선택해주세요.'); return; }
-      const text = sel.getRangeAt(0).toString();
-      sel.getRangeAt(0).deleteContents();
-      sel.getRangeAt(0).insertNode(document.createTextNode(text));
+      const range = sel.getRangeAt(0);
+      const text = range.toString();
+      range.deleteContents();
+      const textNode = document.createTextNode(text);
+      range.insertNode(textNode);
+      // 선택 범위가 서식 태그(굵게/색/하이라이트) "안쪽"이었으면(예: 하이라이트된 글자만 선택)
+      // 그 태그는 내용만 비워진 채 빈 껍데기로 남아서, 방금 다시 넣은 글자를 도로 감싸버리는
+      // 문제가 있었다(2026-09-23 실측, "지우기가 안먹히는데") -- 남은 빈 서식 태그를 마저 풀어준다.
+      let wrapper = textNode.parentElement;
+      while (wrapper && wrapper !== contentInput && (wrapper.tagName === 'B' || wrapper.tagName === 'SPAN')) {
+        const parent = wrapper.parentElement;
+        while (wrapper.firstChild) parent.insertBefore(wrapper.firstChild, wrapper);
+        parent.removeChild(wrapper);
+        wrapper = textNode.parentElement;
+      }
+      sel.removeAllRanges();
+      const newRange = document.createRange();
+      newRange.selectNodeContents(textNode);
+      sel.addRange(newRange);
       contentInput.dispatchEvent(new Event('input'));
     };
   });
