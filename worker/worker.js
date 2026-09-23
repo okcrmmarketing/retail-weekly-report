@@ -26,7 +26,7 @@ function corsHeaders() {
   return {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET,PUT,POST,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, X-Api-Key',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Api-Key, X-View-Password',
   };
 }
 
