@@ -47,6 +47,17 @@ function checkApiKey(request, env) {
   return env.API_KEY && key === env.API_KEY;
 }
 
+// 열람(조회) 비밀번호 확인 — 2026-09-23 "비밀번호 하나 있어야 되지 않을까?" 요청으로, 그동안
+// 인증 없이 아무나 볼 수 있던 /api/bootstrap, /api/config에 건다. config:viewHash가 아직
+// 없으면(한 번도 등록 안 됐으면) 무조건 막는다 — 등록은 /api/view/login에서만 한다.
+async function checkViewPassword(request, env) {
+  const storedHash = await env.RETAIL_WEEKLY.get('config:viewHash');
+  if (!storedHash) return false;
+  const pw = request.headers.get('X-View-Password') || '';
+  const hash = await sha256Hex(pw);
+  return hash === storedHash;
+}
+
 async function getJSON(env, key, fallback) {
   const v = await env.RETAIL_WEEKLY.get(key);
   if (v === null) return fallback;
@@ -78,6 +89,7 @@ export default {
     try {
       // ---- 부트스트랩: 특정 주차의 모든 팀 데이터를 한 번에 ----
       if (path === '/api/bootstrap' && request.method === 'GET') {
+        if (!(await checkViewPassword(request, env))) return json({ error: '인증 실패' }, 401);
         const week = url.searchParams.get('week');
         if (!week) return json({ error: 'week 파라미터 필요' }, 400);
 
@@ -94,8 +106,9 @@ export default {
         return json({ week, teams, work, trend, vacation, order });
       }
 
-      // ---- 팀 목록만 조회 (공개, 인증 불필요) ----
+      // ---- 팀 목록만 조회 ----
       if (path === '/api/config' && request.method === 'GET') {
+        if (!(await checkViewPassword(request, env))) return json({ error: '인증 실패' }, 401);
         const teams = await ensureTeams(env);
         return json({ teams });
       }
@@ -121,6 +134,31 @@ export default {
           return json({ error: 'week/order.work/order.trend 필요' }, 400);
         }
         await putJSON(env, `week:${week}:order`, order);
+        return json({ ok: true });
+      }
+
+      // ---- 열람 비밀번호 로그인(최초 1회는 등록) ----
+      if (path === '/api/view/login' && request.method === 'POST') {
+        const { password } = await request.json();
+        const storedHash = await env.RETAIL_WEEKLY.get('config:viewHash');
+        if (!storedHash) {
+          const hash = await sha256Hex(password || '');
+          await env.RETAIL_WEEKLY.put('config:viewHash', hash);
+          return json({ ok: true, firstSetup: true });
+        }
+        const hash = await sha256Hex(password || '');
+        return json({ ok: hash === storedHash });
+      }
+
+      // ---- 열람 비밀번호 변경 ----
+      if (path === '/api/view/password' && request.method === 'PUT') {
+        if (!checkApiKey(request, env)) return json({ error: '인증 실패' }, 401);
+        const { oldPassword, newPassword } = await request.json();
+        const storedHash = await env.RETAIL_WEEKLY.get('config:viewHash');
+        const oldHash = await sha256Hex(oldPassword || '');
+        if (storedHash && oldHash !== storedHash) return json({ error: '기존 비밀번호 불일치' }, 401);
+        const newHash = await sha256Hex(newPassword || '');
+        await env.RETAIL_WEEKLY.put('config:viewHash', newHash);
         return json({ ok: true });
       }
 

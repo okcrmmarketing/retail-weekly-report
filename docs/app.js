@@ -84,10 +84,16 @@ let state = {
 };
 let workDragSrcIdx = null;
 let adminSessionPassword = null; // 로그인 성공 시 세션 동안만 메모리 보관 (재입력 방지용)
+// 페이지 열람 자체를 비밀번호로 막는다(2026-09-23 요청, "비밀번호 하나 있어야 되지 않을까?") —
+// 이전엔 관리자(수정)만 비번이 있고 그냥 보는 건 누구나 가능했다. sessionStorage에 넣어서
+// 브라우저 탭을 닫기 전까진 다시 안 물어보게 한다(관리자 비번은 탭 새로고침마다 다시 물어보는
+// 기존 방식과 다르게, 매주 보는 화면이라 세션 동안은 유지되는 게 나을 것 같아 sessionStorage 씀).
+let viewSessionPassword = sessionStorage.getItem('viewPw') || null;
 
 // ---------------- API 호출 ----------------
 async function apiGet(path) {
-  const res = await fetch(API + path);
+  const res = await fetch(API + path, { headers: { 'X-View-Password': viewSessionPassword || '' } });
+  if (res.status === 401) { viewSessionPassword = null; sessionStorage.removeItem('viewPw'); showViewGate(); throw new Error('비밀번호가 만료되었습니다. 다시 입력해 주세요.'); }
   if (!res.ok) throw new Error('서버 오류 (' + res.status + ')');
   return res.json();
 }
@@ -1047,6 +1053,19 @@ function wireAdmin() {
       msg.textContent = '비밀번호가 변경되었습니다.';
     } catch (e) { msg.textContent = '변경 실패: ' + e.message; }
   });
+
+  document.getElementById('viewChangePasswordBtn').addEventListener('click', async () => {
+    const p1 = document.getElementById('viewNewPassword1').value;
+    const p2 = document.getElementById('viewNewPassword2').value;
+    const msg = document.getElementById('viewActionMsg');
+    if (!p1 || p1 !== p2) { msg.textContent = '새 비밀번호가 일치하지 않습니다.'; return; }
+    try {
+      await apiWrite('/api/view/password', 'PUT', { oldPassword: viewSessionPassword, newPassword: p1 });
+      viewSessionPassword = p1;
+      sessionStorage.setItem('viewPw', p1);
+      msg.textContent = '열람 비밀번호가 변경되었습니다. 다른 팀원들에게 새 비밀번호를 알려주세요.';
+    } catch (e) { msg.textContent = '변경 실패: ' + e.message; }
+  });
 }
 
 // ---------------- 트렌드 내용 서식(굵게/색상) ----------------
@@ -1264,10 +1283,43 @@ function wireGlobalToolbar() {
   document.getElementById('downloadAllBtn').addEventListener('click', downloadAllTeams);
 }
 
-(function init() {
-  if (!CFG.WORKER_BASE_URL || CFG.WORKER_BASE_URL.startsWith('여기에')) {
-    alert('config.js에 Cloudflare Worker 주소/API_KEY를 먼저 설정해주세요.');
+// ---------------- 열람 비밀번호 게이트 ----------------
+function showViewGate() {
+  document.getElementById('viewGateModal').classList.remove('hidden');
+  document.getElementById('viewGateError').classList.add('hidden');
+  const input = document.getElementById('viewPasswordInput');
+  input.value = '';
+  setTimeout(() => input.focus(), 50);
+}
+function hideViewGate() {
+  document.getElementById('viewGateModal').classList.add('hidden');
+}
+async function tryViewLogin(startAppFn) {
+  const pw = document.getElementById('viewPasswordInput').value;
+  const errEl = document.getElementById('viewGateError');
+  try {
+    const r = await fetch(API + '/api/view/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw }),
+    });
+    const res = await r.json();
+    if (!res.ok) { errEl.textContent = '비밀번호가 틀렸습니다.'; errEl.classList.remove('hidden'); return; }
+    viewSessionPassword = pw;
+    sessionStorage.setItem('viewPw', pw);
+    hideViewGate();
+    startAppFn();
+  } catch (e) {
+    errEl.textContent = '서버에 연결하지 못했습니다: ' + e.message;
+    errEl.classList.remove('hidden');
   }
+}
+function wireViewGate(startAppFn) {
+  document.getElementById('viewGateBtn').addEventListener('click', () => tryViewLogin(startAppFn));
+  document.getElementById('viewPasswordInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') tryViewLogin(startAppFn);
+  });
+}
+
+function startApp() {
   wireTypeTabs();
   wireWeekNav();
   wirePresent();
@@ -1277,4 +1329,19 @@ function wireGlobalToolbar() {
   wireGlobalToolbar();
   wireAdmin();
   loadWeek();
+}
+
+(function init() {
+  if (!CFG.WORKER_BASE_URL || CFG.WORKER_BASE_URL.startsWith('여기에')) {
+    alert('config.js에 Cloudflare Worker 주소/API_KEY를 먼저 설정해주세요.');
+  }
+  wireViewGate(startApp);
+  if (viewSessionPassword) {
+    // 이미 이번 세션에 인증했으면 게이트 없이 바로 시작 — 실패하면(비번이 바뀐 경우 등)
+    // apiGet이 401을 감지해 다시 게이트를 띄운다.
+    hideViewGate();
+    startApp();
+  } else {
+    showViewGate();
+  }
 })();

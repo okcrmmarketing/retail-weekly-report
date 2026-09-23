@@ -11,6 +11,18 @@
 </head>
 <body>
 
+  <div id="viewGateModal" class="modal-backdrop">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2>리테일기획부 주간업무</h2>
+      </div>
+      <p class="subtitle">비밀번호를 입력해야 열람할 수 있습니다. (최초 접속 시 입력한 값이 새 비밀번호로 등록됩니다)</p>
+      <input id="viewPasswordInput" type="password" placeholder="비밀번호" autocomplete="off" />
+      <p id="viewGateError" class="error hidden"></p>
+      <button id="viewGateBtn" class="btn btn-solid">확인</button>
+    </div>
+  </div>
+
   <header class="app-header">
     <div class="header-title">
       <span class="eyebrow">WEEKLY REPORT</span>
@@ -201,11 +213,18 @@
         <button id="adminAddTeamBtn" class="btn btn-outline btn-sm">+ 팀 추가</button>
         <button id="adminSaveTeamsBtn" class="btn btn-solid btn-sm">팀 목록 저장</button>
 
-        <h3>비밀번호 변경</h3>
+        <h3>관리자 비밀번호 변경</h3>
         <input id="adminNewPassword1" type="password" placeholder="새 비밀번호" />
         <input id="adminNewPassword2" type="password" placeholder="새 비밀번호 확인" />
         <button id="adminChangePasswordBtn" class="btn btn-outline btn-sm">비밀번호 변경</button>
         <p id="adminActionMsg" class="hint"></p>
+
+        <h3>열람 비밀번호 변경</h3>
+        <p class="hint">페이지를 볼 때 물어보는 비밀번호입니다 (팀원들에게 공유하는 것).</p>
+        <input id="viewNewPassword1" type="password" placeholder="새 비밀번호" />
+        <input id="viewNewPassword2" type="password" placeholder="새 비밀번호 확인" />
+        <button id="viewChangePasswordBtn" class="btn btn-outline btn-sm">비밀번호 변경</button>
+        <p id="viewActionMsg" class="hint"></p>
       </div>
     </div>
   </div>
