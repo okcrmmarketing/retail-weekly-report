@@ -528,7 +528,14 @@ main#mainContent { max-width: 1180px; margin: 0 auto; padding: 0 24px 60px; }
   .preview-col { position: static; }
   .preview-card { box-shadow: none; border: none; padding: 0; }
   .print-only-area.active { display: block; }
-  .print-only-area .preview-card { page-break-after: always; }
+  /* 마지막 카드 뒤에도 page-break-after가 걸려서 맨 끝에 빈 페이지가 한 장 더 찍혔다
+     (2026-10-06 지적) -- 마지막 카드는 페이지를 넘기지 않는다. */
+  .print-only-area .preview-card:not(:last-child) { page-break-after: always; }
+  /* 전체 인쇄 중엔 printAllArea 목록과 별개로, 지금 보고 있던 탭의 "단일 팀 미리보기"
+     (.preview-col)가 숨겨지지 않아서 그 팀만 두 번 찍혔다(2026-10-06 지적) -- 전체 인쇄를
+     시작할 때만 app.js가 body에 붙이는 printing-all 클래스로 이 경우만 숨긴다("인쇄" 단건
+     버튼은 이 클래스가 안 붙으니 그대로 동작). */
+  body.printing-all .preview-col { display: none !important; }
 
   .print-dept-header {
     display: block; text-align: right; font-size: 13px; font-weight: 700;

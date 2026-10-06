@@ -977,6 +977,11 @@ function printAllPreview(type) {
   const area = document.getElementById('printAllArea');
   area.innerHTML = state.teams.map((team) => `<div class="preview-card">${type === 'work' ? buildWorkPreviewHtml(team) : buildTrendPreviewHtml(team)}</div>`).join('');
   area.classList.add('active');
+  // 전체 인쇄 중엔 현재 탭에 떠 있던 "단일 팀 미리보기"(.preview-col, 업무/트렌드 탭 안에 항상
+  // 존재)가 @media print에서 전혀 숨겨지지 않아서, 그 탭을 보고 있던 팀의 내용이 printAllArea
+  // 목록과 겹쳐 두 번 인쇄됐다(2026-10-06 지적, "똑같은 게 2개씩 나온다"). body에 클래스를
+  // 달아 인쇄 CSS에서 그 한 팀 미리보기만 콕 집어 숨긴다.
+  document.body.classList.add('printing-all');
   // 트렌드보고 전체 인쇄는 방금 innerHTML로 꽂아 넣은 <img>(사진 첨부, data URL)가 아직
   // 디코딩/페인트되기 전인데 window.print()를 바로 불러서, 이미지가 빠지거나 레이아웃이
   // 깨진 채로 인쇄됐다(2026-10-06 지적). 업무보고는 이미지가 없어 안 겪는 문제라 트렌드만
@@ -987,7 +992,11 @@ function printAllPreview(type) {
     img.addEventListener('error', resolve, { once: true });
   }))).then(() => {
     withBlankTitle(() => window.print());
-    setTimeout(() => { area.classList.remove('active'); area.innerHTML = ''; }, 500);
+    setTimeout(() => {
+      area.classList.remove('active');
+      area.innerHTML = '';
+      document.body.classList.remove('printing-all');
+    }, 500);
   });
 }
 
