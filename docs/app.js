@@ -980,9 +980,31 @@ function printPreview(type) {
   withBlankTitle(() => window.print());
 }
 
+// buildWorkPreviewHtml/buildTrendPreviewHtml 내부의 "작성된 내용이 없습니다" 판정 로직과
+// 각각 똑같이 맞춰둔 것 -- 전체 인쇄에서 빈 팀을 아예 빼기 위해 그 판정만 밖에서도 필요해졌다
+// (2026-10-06 지적, "작성 안 된 팀 꺼는 안 나와도 된다").
+function teamHasContent(team, type) {
+  if (type === 'work') {
+    const groups = (state.work[team.key] || { items: [] }).items;
+    const vacItems = (state.vacation[team.key] || { items: [] }).items;
+    return groups.some((g) => (g.tasks || []).length) || vacItems.length > 0;
+  }
+  const allItems = (state.trend[team.key] || { items: [] }).items;
+  const members = team.members || [];
+  const ordered = members.length
+    ? members.map((m) => allItems.find((it) => it.author === m)).filter(Boolean)
+    : allItems;
+  return ordered.some((t) => t.title || t.content || (t.images || []).length);
+}
+
 function printAllPreview(type) {
   const area = document.getElementById('printAllArea');
-  area.innerHTML = state.teams.map((team) => `<div class="preview-card">${type === 'work' ? buildWorkPreviewHtml(team) : buildTrendPreviewHtml(team)}</div>`).join('');
+  const teamsWithContent = state.teams.filter((team) => teamHasContent(team, type));
+  if (!teamsWithContent.length) {
+    alert('인쇄할 내용이 작성된 팀이 없습니다.');
+    return;
+  }
+  area.innerHTML = teamsWithContent.map((team) => `<div class="preview-card">${type === 'work' ? buildWorkPreviewHtml(team) : buildTrendPreviewHtml(team)}</div>`).join('');
   area.classList.add('active');
   // 전체 인쇄 중엔 현재 탭에 떠 있던 "단일 팀 미리보기"(.preview-col, 업무/트렌드 탭 안에 항상
   // 존재)가 @media print에서 전혀 숨겨지지 않아서, 그 탭을 보고 있던 팀의 내용이 printAllArea
