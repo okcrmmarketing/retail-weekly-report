@@ -513,10 +513,17 @@ function buildTrendPreviewHtml(team, authorFilter) {
         </div>`;
     }).join('');
   }
+  // 우측 상단 담당자 이름은 "지금 전역으로 선택돼 있던 사람"(state.activeTrendAuthor)이
+  // 아니라 이 카드가 실제로 어떤 사람 걸로 좁혀져 그려졌는지(authorFilter)를 따라야 한다 --
+  // 전역 값을 그대로 썼더니 "전체 인쇄"에서 팀마다 여러 명 내용이 섞여 있는데도 마지막으로
+  // 선택했던 사람 이름 하나가 모든 팀 카드에 똑같이 찍혔다(2026-10-06 지적, "안수연이
+  // 왜 3개나 되냐" -- 본인 팀 아닌 팀에도, 심지어 내용이 아예 없는 팀에도 찍혀 있었음).
+  // 단일 미리보기/단건 인쇄는 authorFilter를 그대로 넘기므로(renderTrendPreview) 그대로 보이고,
+  // "전체 인쇄"는 authorFilter 없이 호출하므로(printAllPreview) 이제 빈 칸으로 비워진다.
   return `
     <div class="preview-title-row">
       <h2 class="preview-title">${escapeHtml(team.label)} 트렌드보고</h2>
-      <span class="print-dept-header">${escapeHtml(state.activeTrendAuthor || '')}</span>
+      <span class="print-dept-header">${authorFilter ? escapeHtml(authorFilter) : ''}</span>
     </div>
     <p class="preview-subtitle">${escapeHtml(weekLabel(state.week))}</p>
     <hr class="preview-divider" />
