@@ -977,8 +977,18 @@ function printAllPreview(type) {
   const area = document.getElementById('printAllArea');
   area.innerHTML = state.teams.map((team) => `<div class="preview-card">${type === 'work' ? buildWorkPreviewHtml(team) : buildTrendPreviewHtml(team)}</div>`).join('');
   area.classList.add('active');
-  withBlankTitle(() => window.print());
-  setTimeout(() => { area.classList.remove('active'); area.innerHTML = ''; }, 500);
+  // 트렌드보고 전체 인쇄는 방금 innerHTML로 꽂아 넣은 <img>(사진 첨부, data URL)가 아직
+  // 디코딩/페인트되기 전인데 window.print()를 바로 불러서, 이미지가 빠지거나 레이아웃이
+  // 깨진 채로 인쇄됐다(2026-10-06 지적). 업무보고는 이미지가 없어 안 겪는 문제라 트렌드만
+  // 티가 났음. 모든 <img>가 로드(또는 에러로 확정)될 때까지 기다렸다가 인쇄한다.
+  const imgs = Array.from(area.querySelectorAll('img'));
+  Promise.all(imgs.map((img) => img.complete ? Promise.resolve() : new Promise((resolve) => {
+    img.addEventListener('load', resolve, { once: true });
+    img.addEventListener('error', resolve, { once: true });
+  }))).then(() => {
+    withBlankTitle(() => window.print());
+    setTimeout(() => { area.classList.remove('active'); area.innerHTML = ''; }, 500);
+  });
 }
 
 async function downloadAllTeams() {
