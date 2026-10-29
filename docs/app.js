@@ -49,15 +49,16 @@ function formatDueDate(dateStr) {
 
 function weekOfMonthLabel(weekId) {
   const monday = weekIdToMonday(weekId);
-  const year = monday.getUTCFullYear();
-  const month = monday.getUTCMonth() + 1;
-  // "1주차" = 그 달 1일이 속한 월~일 주(전달에서 넘어온 날짜가 섞여 있어도 그 주가 1주차).
-  // 예: 2026-09-01(화)이 속한 주는 8/31(월)~9/6(일) -> 9월 1주차, 그 다음 9/7~9/13이 2주차.
-  const firstOfMonth = new Date(Date.UTC(year, month - 1, 1));
-  const firstDow = (firstOfMonth.getUTCDay() + 6) % 7; // 월=0 ... 일=6
-  const firstWeekMonday = new Date(firstOfMonth);
-  firstWeekMonday.setUTCDate(firstOfMonth.getUTCDate() - firstDow);
-  const weekOfMonth = Math.round((monday - firstWeekMonday) / (7 * 86400000)) + 1;
+  // 월~일 한 주는 목요일이 속한 달의 주차로 센다(그 주 7일 중 4일 이상이 있는 달).
+  // 예: 8/31(월)~9/6(일) -> 목요일 9/3 -> 9월 1주차, 10/26~11/1 -> 목요일 10/29 -> 10월 5주차,
+  // 그 다음 11/2~11/8 -> 11월 1주차.
+  // (2026-10-29 수정: 예전엔 달은 월요일 기준, 주차 번호는 "1일이 속한 주=1주차" 기준으로 따로 계산해서
+  // 1일이 금~일요일인 달은 "10월 5주차" 다음이 "11월 2주차"로 1주차가 건너뛰어졌다.)
+  const thursday = new Date(monday);
+  thursday.setUTCDate(monday.getUTCDate() + 3);
+  const year = thursday.getUTCFullYear();
+  const month = thursday.getUTCMonth() + 1;
+  const weekOfMonth = Math.floor((thursday.getUTCDate() - 1) / 7) + 1;
   return `${year}년 ${month}월 ${weekOfMonth}주차`;
 }
 
