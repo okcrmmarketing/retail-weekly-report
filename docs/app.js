@@ -561,7 +561,11 @@ async function saveCurrentTrend() {
   const btn = document.getElementById('saveTrendBtn');
   btn.disabled = true;
   try {
-    await apiWrite('/api/save', 'PUT', { week: state.week, section: 'trend', team: team.key, data: state.trend[team.key] });
+    // 팀 트렌드 배열 전체가 아니라 "내 항목 하나만" 보낸다 — 다른 팀원이 그 사이에 저장한
+    // 내용을 내가 들고 있던 옛 배열로 덮어써서 지워버리는 문제가 있었다(2026-10-12, worker.js
+    // /api/trend-item 주석 참고). 서버가 author로 내 항목만 찾아 병합해서 안전하다.
+    const item = findOrCreateTrendItem(team, state.activeTrendAuthor);
+    await apiWrite('/api/trend-item', 'PUT', { week: state.week, team: team.key, item });
     flashSaved(btn);
     renderTrendPreview();
   } catch (e) { alert('저장 실패: ' + e.message + (e.message.includes('413') ? ' (이미지 용량이 너무 큽니다)' : '')); }
