@@ -2,13 +2,15 @@ name = "retail-weekly-report"
 main = "worker.js"
 compatibility_date = "2026-01-01"
 
-# Cloudflare 대시보드 > Workers & Pages > KV 에서 네임스페이스를 만든 뒤
-# 그 id를 아래 <YOUR_KV_NAMESPACE_ID>에 채워 넣으세요.
-# (대시보드에서 Worker에 바인딩만 클릭으로 연결한다면 이 파일 자체는 안 써도 됩니다 - README 참고)
+# 2026-10-29부터 GitHub Actions(.github/workflows/deploy-worker.yml)가 worker/ 변경 시 이 설정으로 자동 배포한다.
+# 대시보드에서 넣은 변수가 배포 때 지워지지 않게 유지(API_KEY는 Secret이라 원래 유지됨).
+keep_vars = true
+
+# KV 네임스페이스 RETAIL_WEEKLY (Cloudflare 대시보드 > Workers KV). 위치 주소일 뿐 비밀값 아님.
+# 이 id가 틀리면 배포된 Worker가 기존 주간보고 데이터를 못 찾으니 바꾸지 말 것.
 [[kv_namespaces]]
 binding = "RETAIL_WEEKLY"
-id = "<YOUR_KV_NAMESPACE_ID>"
+id = "809c7c61c51c4048899b5d3d94d0b6aa"
 
-# 쓰기(PUT) 요청 인증용 비밀키. 대시보드 > Worker > Settings > Variables에서
-# API_KEY 라는 이름의 "Secret" 변수로 등록하세요 (여기 평문으로 적지 말 것).
-# CLI(wrangler)를 쓴다면: wrangler secret put API_KEY
+# 쓰기(PUT) 요청 인증용 비밀키 API_KEY는 대시보드 > Worker > Settings > Variables의 "Secret"으로 등록돼 있음
+# (여기 평문으로 적지 말 것).

@@ -1,0 +1,21 @@
+name: Worker 자동 배포
+
+# worker/ 폴더가 바뀐 커밋이 main에 올라오면 Cloudflare Worker에 배포한다.
+# (화면 docs/는 GitHub Pages가 따로 자동 배포)
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'worker/**'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: worker

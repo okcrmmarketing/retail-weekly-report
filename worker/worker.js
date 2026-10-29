@@ -114,6 +114,12 @@ export default {
       }
 
       // ---- 특정 팀의 특정 섹션 저장 ----
+      // 주의: 전체 배열을 통째로 덮어쓴다 — work/vacation은 아직 이 방식뿐이라, 같은 팀의
+      // 여러 팀원이 비슷한 시간대에 각자 저장하면 먼저 저장된 다른 사람의 편집분이 나중 저장에
+      // 덮여 사라질 수 있다(2026-10-12 확인된 실제 버그, 아래 /api/trend-item 참고). work는
+      // 팀 전체가 공유하는 카테고리별 목록이라(개인별로 안 나뉨) 안전하게 병합할 "소유자 키"가
+      // 없어서 당장은 고치지 않음 — 여러 명이 동시에 업무보고를 저장하는 일이 드물다면 체감
+      // 위험은 trend보다 낮지만, 구조적으로는 같은 문제를 안고 있다.
       if (path === '/api/save' && request.method === 'PUT') {
         if (!checkApiKey(request, env)) return json({ error: '인증 실패' }, 401);
         const body = await request.json();
@@ -122,6 +128,28 @@ export default {
         if (!['work', 'trend', 'vacation'].includes(section)) return json({ error: '잘못된 section' }, 400);
 
         await putJSON(env, `week:${week}:${section}:${team}`, data);
+        return json({ ok: true });
+      }
+
+      // ---- 트렌드보고 "내 항목 하나만" 서버에서 병합 저장 ----
+      // 같은 팀 트렌드보고를 여러 팀원이 각자 작성하는데, 기존 /api/save는 자기가 불러온 시점의
+      // 팀 전체 배열(다른 사람 항목 포함)을 통째로 다시 저장해서 — A가 불러온 뒤 B가 저장하고,
+      // 그 다음 A가 저장하면 B의 항목이 A가 들고 있던 옛 배열로 덮여 사라졌다("왜 계속 삭제되냐"는
+      // 반복 제보, 2026-10-12 코드로 재현 원인 확인). 이제 클라이언트는 자기 항목(author로 식별)
+      // 하나만 보내고, 서버가 그 시점의 최신 배열을 직접 읽어 그 항목만 찾아 바꾸거나 새로 추가한
+      // 뒤 저장한다 — 다른 사람 항목은 절대 건드리지 않는다.
+      if (path === '/api/trend-item' && request.method === 'PUT') {
+        if (!checkApiKey(request, env)) return json({ error: '인증 실패' }, 401);
+        const body = await request.json();
+        const { week, team, item } = body || {};
+        if (!week || !team || !item || !item.author) return json({ error: 'week/team/item.author 필요' }, 400);
+
+        const key = `week:${week}:trend:${team}`;
+        const current = await getJSON(env, key, { items: [] });
+        const items = Array.isArray(current.items) ? current.items.slice() : [];
+        const idx = items.findIndex((it) => it.author === item.author);
+        if (idx >= 0) items[idx] = item; else items.push(item);
+        await putJSON(env, key, { items });
         return json({ ok: true });
       }
 
